@@ -38,10 +38,11 @@ if not has_ressources:
       windll.Kernel32.QueryPerformanceCounter(byref(val))
       return val
     def abstract_ressource_counter(r1, r2):
+      """Returns the elapsed time between r2 and r1 (r2 > r1) in milliseconds"""
       val = c_int64() 
       windll.Kernel32.QueryPerformanceFrequency(byref(val))
       
-      return (1000*(r2.value-r1.value))/val.value
+      return (1000*float(r2.value-r1.value))/val.value
 
   except ImportError:
     has_win32api = False
