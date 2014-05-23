@@ -246,7 +246,7 @@ _solver_fns = {
 
 def _minimize_dogleg(obj, free_variables, on_step=None,
                      maxiter=200, max_fevals=np.inf, sparse_solver='spsolve',
-                     disp=False, show_residuals=None, e_1=1e-15, e_2=1e-15, e_3=0., delta_0=10):
+                     disp=False, show_residuals=None, e_1=1e-15, e_2=1e-15, e_3=0., delta_0=None):
 
     """"Nonlinear optimization using Powell's dogleg method.
 
@@ -341,7 +341,7 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
         while True:
             # if the Cauchy point is outside the trust region,
             # take that direction but only to the edge of the trust region
-            if norm(d_sd) >= delta:
+            if delta is not None and norm(d_sd) >= delta:
                 pif('PROGRESS: Using stunted cauchy')
                 d_dl = np.array(col(delta/norm(d_sd) * d_sd))
             else:
@@ -367,9 +367,11 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
                     GNcomputed = True
 
                 # if the gauss-newton solution is within the trust region, use it
-                if norm(d_gn) <= delta:
+                if delta is None or norm(d_gn) <= delta:
                     pif('PROGRESS: Using gauss-newton solution')
                     d_dl = np.array(d_gn)
+                    if delta is None:
+                        delta = norm(d_gn)
 
                 else: # between cauchy step and gauss-newton step
                     pif('PROGRESS: between cauchy and gauss-newton')
