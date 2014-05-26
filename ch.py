@@ -289,9 +289,9 @@ class Ch(object):
             if name == 'x':
                 self._dirty_vars.add(name)
                 self.clear_cache(itr)
-            else:
-                import warnings
-                warnings.warn('Trying to set attribute %s on a basic Ch object? Might be a mistake.' % (name,))
+            #else:
+            #    import warnings
+            #    warnings.warn('Trying to set attribute %s on a basic Ch object? Might be a mistake.' % (name,))
 
             object.__setattr__(self, name, value)
             return
