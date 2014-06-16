@@ -11,7 +11,7 @@ See LICENCE.txt for licensing and contact information.
 __all__ = ['array', 'amax','amin', 'max', 'min', 'maximum','minimum','nanmax','nanmin',
             'sum', 'exp', 'log', 'mean',
             'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
-            'sqrt', 'square', 'absolute', 'abs', 
+            'sqrt', 'square', 'absolute', 'abs', 'clip',
             'power',
             'add', 'divide', 'multiply', 'negative', 'subtract', 'reciprocal',
             'dot', 'cumsum',
@@ -278,6 +278,19 @@ class absolute(UnaryElemwise):
     _d = lambda self, x : (x>0)*2-1.
 
 abs = absolute
+
+class clip(ch.Ch):
+    dterms = 'a'
+    terms = 'a_min', 'a_max'
+    term_order = 'a', 'a_min', 'a_max'
+    
+    def compute_r(self):
+        return np.clip(self.a.r, self.a_min, self.a_max)
+    
+    def compute_dr_wrt(self, wrt):
+        if wrt is self.a:
+            result = np.asarray((self.r != self.a_min) & (self.r != self.a_max), np.float64)
+            return sp.diags([result.ravel()], [0]) if len(result)>1 else np.atleast_2d(result)
 
 class sum(ch.Ch):
     dterms = 'x',
