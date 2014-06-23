@@ -482,7 +482,7 @@ class Ch(object):
     @property
     def r(self):
         self._call_on_changed()
-        if self._cache['r'] == None:
+        if self._cache['r'] is None:
             self._cache['r'] = np.asarray(np.atleast_1d(self.compute_r()), dtype=np.float64, order='C')
             self._cache['rview'] = self._cache['r'].view()
             self._cache['rview'].flags.writeable = False
