@@ -19,7 +19,7 @@ import weakref
 import copy as external_copy
 from functools import wraps
 from scipy.sparse.linalg.interface import LinearOperator
-from .utils import row, col
+from utils import row, col
 # silly test change
 
 _props_for_dict = weakref.WeakKeyDictionary()

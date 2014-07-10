@@ -13,8 +13,8 @@ __all__ = ['inv', 'svd', 'det', 'slogdet', 'pinv', 'lstsq']
 
 import numpy as np
 import scipy.sparse as sp
-from .ch import Ch, depends_on, NanDivide
-from .utils import row, col
+from ch import Ch, depends_on, NanDivide
+from utils import row, col
 import ch
 
 

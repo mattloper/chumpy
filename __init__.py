@@ -56,10 +56,12 @@ class Sin(ch.Ch):
         return np.sin(self.x.r)
 
     def compute_dr_wrt(self, wrt):
+        import scipy.sparse
         if wrt is self.x:
-            return np.cos(self.x.r)
+            result = np.cos(self.x.r)
+            return scipy.sparse.diags([result.ravel()], [0]) if len(result)>1 else np.atleast_2d(result)
 
-x1 = Ch(10)
+x1 = Ch([10,20,30])
 result = Sin(x1) # or "result = Sin(x=x1)"
 print result.r
 print result.dr_wrt(x1)
