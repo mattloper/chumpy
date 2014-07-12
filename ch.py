@@ -19,7 +19,9 @@ import copy as external_copy
 from functools import wraps
 from scipy.sparse.linalg.interface import LinearOperator
 from utils import row, col
-# silly test change
+import collections
+from copy import deepcopy
+
 
 _props_for_dict = weakref.WeakKeyDictionary()
 def _props_for(cls):
@@ -41,10 +43,26 @@ def _check_kw_conflict(cls):
     if _kw_conflict_dict[cls]:
         raise Exception("In class %s, don't use reserved keywords in terms/dterms: %s" % (str(cls), str(kw_conflict),))
 
-      
+
+class Term(object):
+    creation_counter = 0
+    def __init__(self, default=None, desc=None, dr=True):
+        self.default = default
+        self.desc = desc
+        self.dr = dr
+
+        # Add a creation_counter, a la Django models, so we can preserve the order in which parameters are defined in the job.
+        # http://stackoverflow.com/a/3288801/893113
+        self.creation_counter = Term.creation_counter
+        Term.creation_counter += 1
+
+
 class Ch(object):
     terms = []
     dterms = ['x']
+
+    _cached_parms = {}
+    _setup_terms = {}
 
     ########################################################
     # Construction
@@ -57,21 +75,7 @@ class Ch(object):
         # Create empty instance
         result = super(Ch, cls).__new__(cls)
 
-        # If they haven't defined terms or dterms, give 
-        # them empty defaults
-        if cls != Ch:
-            if cls.terms == Ch.terms:
-                cls.terms = []
-            elif isinstance(cls.terms, str):
-                cls.terms = (cls.terms,)
-            if cls.dterms == Ch.dterms:
-                cls.dterms = []
-            elif isinstance(cls.dterms, str):
-                cls.dterms = (cls.dterms,)
-
-            _check_kw_conflict(cls)
-                
-        term_order = cls.term_order if hasattr(cls, 'term_order') else list(cls.terms) + list(cls.dterms)
+        cls.setup_terms()
 
         object.__setattr__(result, '_dirty_vars', set())
         object.__setattr__(result, '_itr', None)
@@ -89,12 +93,61 @@ class Ch(object):
         
         object.__setattr__(result, '_depends_on_deps', cpd)
 
-        for idx, a in enumerate(args):
-            kwargs[term_order[idx]] = a
+        if cls != Ch:
+            for idx, a in enumerate(args):
+                kwargs[cls.term_order[idx]] = a
+        elif len(args)>0:
+            kwargs['x'] = args[0]
 
-        result.set(**kwargs)
+        defs = {p.name : deepcopy(p.default) for p in cls.parm_declarations() if p.default is not None}
+        defs.update(kwargs)
+        result.set(**defs)
         
         return result
+
+    @classmethod
+    def parm_declarations(cls):
+        if cls.__name__ not in cls._cached_parms:
+            parameter_declarations = collections.OrderedDict()
+            parameters = inspect.getmembers(cls, lambda x: isinstance(x, Term))
+            for name, decl in sorted(parameters, key=lambda x: x[1].creation_counter):
+                decl.name = name
+                parameter_declarations[name] = decl
+            cls._cached_parms[cls.__name__] = parameter_declarations
+        return cls._cached_parms[cls.__name__]
+
+    @classmethod
+    def setup_terms(cls):
+        if cls.__name__ in cls._setup_terms: return
+
+        if cls == Ch:
+            return
+
+        parm_declarations = cls.parm_declarations()
+
+        if cls.dterms is Ch.dterms:
+            cls.dterms = []
+        elif isinstance(cls.dterms, str):
+            cls.dterms = (cls.dterms,)
+        if cls.terms is Ch.terms:
+            cls.terms = []
+        elif isinstance(cls.terms, str):
+            cls.terms = (cls.terms,)
+
+        # Must be either new or old style
+        len_oldstyle_parms = len(cls.dterms)+len(cls.terms)
+        if len(parm_declarations) > 0:
+            assert(len_oldstyle_parms==0)
+            cls.term_order = [t.name for t in parm_declarations]
+            cls.dterms = [t.name for t in parm_declarations if t.dr]
+            cls.terms = [t.name for t in parm_declarations if not t.dr]
+        else:
+            if not hasattr(cls, 'term_order'):
+                cls.term_order = list(cls.terms) + list(cls.dterms)
+
+        _check_kw_conflict(cls)
+        cls._setup_terms[cls.__name__] = True
+
 
     ########################################################
     # Identifiers
@@ -824,7 +877,8 @@ class ChHandle(Ch):
 class ChLambda(Ch):
     terms = ['lmb', 'initial_args']
     dterms = []
-    
+    term_order = ['lmb', 'initial_args']
+
     def on_changed(self, which):
         for argname in set(which).intersection(set(self.args.keys())):
             self.args[argname].x = getattr(self, argname)
