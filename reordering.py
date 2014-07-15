@@ -6,7 +6,7 @@ See LICENCE.txt for licensing and contact information.
 
 import ch
 import numpy as np
-from chumpy.utils import row, col
+from utils import row, col
 import scipy.sparse as sp
 import weakref
 
@@ -163,7 +163,7 @@ class Reshape(Permute):
     dterms = 'a',
     terms = 'newshape',
     term_order= 'a', 'newshape'
-    
+
     def compute_r(self):
         return self.a.r.reshape(self.newshape)
 
@@ -300,8 +300,8 @@ class Select(Permute):
     
 
 class AtleastNd(ch.Ch):
-    dterms = 'x',
-    terms = 'ndims',
+    dterms = 'x'
+    terms = 'ndims'
     
     def compute_r(self):
         xr = self.x.r

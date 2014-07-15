@@ -47,7 +47,7 @@ import ch
 import numpy as np
 import cPickle as pickle
 import scipy.sparse as sp
-from chumpy.utils import row, col
+from utils import row, col
 from copy import copy as copy_copy
 
 __all__ += ['pi', 'set_printoptions']
@@ -337,7 +337,7 @@ class mean(ch.Ch):
             self.dr_cache = {}
 
     def compute_r(self):
-        return np.array(np.mean(self.x.r, axis=self.axis))
+        return np.array([np.mean(self.x.r, axis=self.axis)])
 
     def compute_dr_wrt(self, wrt):
         if wrt is not self.x:

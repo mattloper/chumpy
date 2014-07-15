@@ -15,8 +15,9 @@ import time
 import numpy as np
 from numpy.linalg import norm
 
-from chumpy import ch
-from chumpy.utils import row, col
+import ch, utils
+from utils import row, col
+
 import scipy.sparse as sp
 import scipy.sparse
 import scipy.optimize
@@ -25,6 +26,7 @@ import scipy.optimize
 
 vstack = lambda x : sp.vstack(x, format='csc') if any([sp.issparse(a) for a in x]) else np.vstack(x)
 hstack = lambda x : sp.hstack(x, format='csc') if any([sp.issparse(a) for a in x]) else np.hstack(x)
+
 
 # Nelder-Mead
 # Powell
@@ -52,7 +54,7 @@ def minimize(fun, x0, method='dogleg', bounds=None, constraints=(), tol=None, ca
     free_variables = x0
 
 
-    from .ch import SumOfSquares
+    from ch import SumOfSquares
 
     hessp = None
     hess = None
@@ -206,8 +208,8 @@ class ChInputsStacked(ch.Ch):
                     self.free_variables[idx].__setattr__('x', self.x.r[rng], _giter)
                 #self.free_variables[idx] = self.obj.replace(freevar, Ch(self.x.r[rng].copy()))
                 pos += sz
-                
     
+
     @property
     def J(self):
         result = self.dr_wrt(self.x).copy()
@@ -272,7 +274,7 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
     num_unique_ids = len(np.unique(np.array([id(freevar) for freevar in free_variables])))
     if num_unique_ids != len(free_variables):
         raise Exception('The "free_variables" param contains duplicate variables.')
-    
+        
     obj = ChInputsStacked(obj=obj, free_variables=free_variables, x=np.concatenate([freevar.r.ravel() for freevar in free_variables]))
 
     def call_cb():
@@ -313,7 +315,7 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
     tm = time.time()
     pif('computing Jacobian...')
     J = obj.J
-        
+
     if sp.issparse(J):
         assert(J.nnz > 0)
     pif('Jacobian (%dx%d) computed in %.2fs' % (J.shape[0], J.shape[1], time.time() - tm))
@@ -464,8 +466,7 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
 
             # the following "collect" is very expensive.
             # please contact matt if you find situations where it actually helps things.
-            # collect()
-                
+            #import gc; gc.collect()
             if stop or improvement_occurred or (fevals >= max_fevals):
                 break
         if k >= k_max:

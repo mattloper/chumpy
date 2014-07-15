@@ -8,7 +8,7 @@ See LICENCE.txt for licensing and contact information.
 """
 
 
-__all__ = ['inv', 'svd', 'det', 'slogdet', 'pinv', 'lstsq']
+__all__ = ['inv', 'svd', 'det', 'slogdet', 'pinv', 'lstsq', 'norm']
 
 import numpy as np
 import scipy.sparse as sp
@@ -24,6 +24,11 @@ try:
     __all__.append('tensorinv')
 except: pass
 
+def norm(x, ord=None, axis=None):
+    if ord is not None or axis is not None:
+        raise NotImplementedError("'ord' and 'axis' should be None for now.")
+
+    return ch.sqrt(ch.sum(x**2))
 
 def lstsq(a, b, rcond=-1):
     if rcond != -1:

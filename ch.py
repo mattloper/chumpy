@@ -280,12 +280,12 @@ class Ch(object):
         
             try:
                 jac = wrt.compute_dr_wrt(inner).T
-            except:
+            except Exception as e:
                 import pdb; pdb.set_trace()
-        
+
             return self._superdot(result, jac)
 
-    
+
     @property
     def shape(self):
         return self.r.shape
@@ -331,7 +331,7 @@ class Ch(object):
         # This restores our unpickleable "_parents" attribute
         for k in set(self.dterms).intersection(set(self.__dict__.keys())):
             setattr(self, k, self.__dict__[k])
-        
+       
     def __setattr__(self, name, value, itr=None):
         #print 'SETTING %s' % (name,)
 
@@ -471,7 +471,7 @@ class Ch(object):
             #         kids.append(p)
             #     else:
             #         parents += [p.__dict__[k] for k in p.dterms]
-            # from body.ch.optimization import minimize_dogleg
+            # from ch.optimization import minimize_dogleg
             # minimize_dogleg(obj=self.__getitem__(key) - value, free_variables=kids, show_residuals=False)            
         else:
             inner = self
@@ -554,7 +554,7 @@ class Ch(object):
                 
             if isinstance(rhs, np.ndarray) and rhs.size==1:
                 rhs = rhs.ravel()[0]
-                
+    
             if isinstance(lhs, numbers.Number) or isinstance(rhs, numbers.Number):
                 return lhs * rhs
 
@@ -740,8 +740,7 @@ class Ch(object):
                         result += ['%s [label="%s"];' % (dst, child_label)]
                         result += string_for(getattr(self, dterm), dterm)
             return result
-            
-        
+
         dot_file_contents = 'digraph G {\n%s\n}' % '\n'.join(list(set(string_for(self, 'root'))))
         dot_file = tempfile.NamedTemporaryFile()
         dot_file.write(dot_file_contents)
