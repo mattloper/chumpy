@@ -7,7 +7,7 @@ See LICENCE.txt for licensing and contact information.
 """
 
 import unittest
-from chumpy import Ch, depends_on
+from ch import Ch, depends_on
 
 class TestInnerComposition(unittest.TestCase):
 

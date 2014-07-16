@@ -12,10 +12,7 @@ import unittest
 import numpy as np
 import scipy.sparse as sp
 
-import chumpy as ch
-from chumpy import Ch
-
-
+import ch
 
 class TestCh(unittest.TestCase):
     
@@ -132,7 +129,7 @@ class TestCh(unittest.TestCase):
         an optimization setting (see optimization.py) and in the set() method, it 
         avoids such redundant clearing of cache."""
         
-        a, b, c = Ch(1), Ch(2), Ch(3)
+        a, b, c = ch.Ch(1), ch.Ch(2), ch.Ch(3)
         x = a+b
         y = x+c
         self.assertTrue(y.r[0]==6)
@@ -164,15 +161,15 @@ class TestCh(unittest.TestCase):
 
     def test_stacking(self):
 
-        a1 = Ch(np.arange(10).reshape(2,5))
-        b1 = Ch(np.arange(20).reshape(4,5))
+        a1 = ch.Ch(np.arange(10).reshape(2,5))
+        b1 = ch.Ch(np.arange(20).reshape(4,5))
         c1 = ch.vstack((a1,b1))
         c1_check = np.vstack((a1.r, b1.r))
         residuals1 = (c1_check - c1.r).ravel()
         
         
-        a2 = Ch(np.arange(10).reshape(5,2))
-        b2 = Ch(np.arange(20).reshape(5,4))
+        a2 = ch.Ch(np.arange(10).reshape(5,2))
+        b2 = ch.Ch(np.arange(20).reshape(5,4))
         c2 = ch.hstack((a2,b2))
         c2_check = np.hstack((a2.r, b2.r))
         residuals2 = (c2_check - c2.r).ravel()
@@ -181,14 +178,14 @@ class TestCh(unittest.TestCase):
         self.assertFalse(np.any(residuals2))
 
     #def test_drs(self):
-    #    a = Ch(2)
-    #    b = Ch(3)
+    #    a = ch.Ch(2)
+    #    b = ch.Ch(3)
     #    c = a * b
     #    print c.dr_wrt(a)
     #    print c.compute_drs_wrt(a).r
     
     def test_reorder_caching(self):
-        a = Ch(np.zeros(8).reshape((4,2)))
+        a = ch.Ch(np.zeros(8).reshape((4,2)))
         b = a.T
         dr0 = b.dr_wrt(a)
         a.x = a.x + 1.
@@ -199,9 +196,9 @@ class TestCh(unittest.TestCase):
         self.assertTrue(dr2 is not dr1)
     
     def test_transpose(self):
-        from chumpy.utils import row, col
+        from utils import row, col
         for which in ('C', 'F'): # test in fortran and contiguous mode
-            a = Ch(np.require(np.zeros(8).reshape((4,2)), requirements=which))
+            a = ch.Ch(np.require(np.zeros(8).reshape((4,2)), requirements=which))
             b = a.T
         
             b1 = b.r.copy()
@@ -222,8 +219,8 @@ class TestCh(unittest.TestCase):
         eps = 1e-8
         for f in fns:
             
-            x0 = Ch(.25)
-            x1 = Ch(x0.r+eps)
+            x0 = ch.Ch(.25)
+            x1 = ch.Ch(x0.r+eps)
             
             pred = f(x0).dr_wrt(x0)
             empr = (f(x1).r - f(x0).r) / eps
@@ -242,7 +239,7 @@ class TestCh(unittest.TestCase):
         # So we pickle/unpickle, change a child and verify the value
         # at root, and verify that both children have parentage.
         import cPickle as pickle
-        tmp = Ch(10) + Ch(20)
+        tmp = ch.Ch(10) + ch.Ch(20)
         tmp = pickle.loads(pickle.dumps(tmp))
         tmp.b.x = 30
         self.assertTrue(tmp.r[0] == 40)
@@ -250,12 +247,8 @@ class TestCh(unittest.TestCase):
         self.assertTrue(tmp.a._parents.keys()[0] == tmp.b._parents.keys()[0])
         
     def test_chlambda1(self):
-      
-        from chumpy import Ch
-        from chumpy.ch import ChLambda
-        
-        c1, c2, c3 = Ch(1), Ch(2), Ch(3)
-        adder = ChLambda(lambda x, y: x+y)
+        c1, c2, c3 = ch.Ch(1), ch.Ch(2), ch.Ch(3)
+        adder = ch.ChLambda(lambda x, y: x+y)
         adder.x = c1
         adder.y = c2
         self.assertTrue(adder.r == 3)
@@ -266,19 +259,16 @@ class TestCh(unittest.TestCase):
 
 
     def test_chlambda2(self):
-        from chumpy import Ch
-        from chumpy.ch import ChLambda
-        passthrough = ChLambda( lambda x : x)
+        passthrough = ch.ChLambda( lambda x : x)
         self.assertTrue(passthrough.dr_wrt(passthrough.x) is not None)
-        passthrough.x = Ch(123)
+        passthrough.x = ch.Ch(123)
         self.assertTrue(passthrough.dr_wrt(passthrough.x) is not None)
 
     # It's probably not reasonable to expect this
     # to work for ChLambda
     #def test_chlambda3(self):
-    #    from ch import ChLambda, Ch
-    #    c1, c2, c3 = Ch(1), Ch(2), Ch(3)    
-    #    triple = ChLambda( lambda x, y, z : x(y, z))
+    #    c1, c2, c3 = ch.Ch(1), ch.Ch(2), ch.Ch(3)    
+    #    triple = ch.ChLambda( lambda x, y, z : x(y, z))
     #    triple.x = Add
     #    triple.y = c2
     #    triple.z = c3
@@ -288,7 +278,7 @@ class TestCh(unittest.TestCase):
         
     
     def test_amax(self):
-        from chumpy import amax
+        from ch import amax
         import numpy as np
         arr = np.empty((5,2,3,7))
         arr.flat[:] = np.sin(np.arange(arr.size)*1000.)
@@ -301,12 +291,12 @@ class TestCh(unittest.TestCase):
             self.assertTrue(np.max(np.abs(pred-real)) < 1e-10)
 
     def test_maximum(self):
-        from chumpy.utils import row, col
-        from chumpy import maximum
+        from utils import row, col
+        from ch import maximum
         
         # Make sure that when we compare the max of two *identical* numbers,
         # we get the right derivatives wrt both
-        the_max = maximum(Ch(1), Ch(1))
+        the_max = maximum(ch.Ch(1), ch.Ch(1))
         self.assertTrue(the_max.r.ravel()[0] == 1.)
         self.assertTrue(the_max.dr_wrt(the_max.a)[0,0] == 1.)
         self.assertTrue(the_max.dr_wrt(the_max.b)[0,0] == 1.)
@@ -315,10 +305,10 @@ class TestCh(unittest.TestCase):
         # a pool of randomly permuted numbers.
         # We test combinations of scalars and 2d arrays.
         rnd = np.asarray(np.random.permutation(np.arange(20)), np.float64)
-        c1 = Ch(rnd[:6].reshape((2,3)))
-        c2 = Ch(rnd[6:12].reshape((2,3)))
-        s1 = Ch(rnd[12])
-        s2 = Ch(rnd[13])
+        c1 = ch.Ch(rnd[:6].reshape((2,3)))
+        c2 = ch.Ch(rnd[6:12].reshape((2,3)))
+        s1 = ch.Ch(rnd[12])
+        s2 = ch.Ch(rnd[13])
         
         eps = .1
         for first in [c1, s1]:
@@ -353,7 +343,7 @@ class TestCh(unittest.TestCase):
 
     def test_shared(self):
     
-        chs = [Ch(i) for i in range(10)]
+        chs = [ch.Ch(i) for i in range(10)]
         vrs = [float(i) for i in range(10)]
     
         func = lambda a : a[0]*a[1] + (a[2]*a[3])/a[4]
@@ -366,7 +356,7 @@ class TestCh(unittest.TestCase):
         #print regular_result
         
         chained_func = func(chs)
-        chained_func.replace(chs[0], Ch(50))
+        chained_func.replace(chs[0], ch.Ch(50))
         vrs[0] = 50
         
         chained_result = chained_func.r
@@ -378,9 +368,9 @@ class TestCh(unittest.TestCase):
             
 
     def test_matmatmult(self):
-        from chumpy import dot        
-        mtx1 = Ch(np.arange(6).reshape((3,2)))
-        mtx2 = Ch(np.arange(8).reshape((2,4))*10)
+        from ch import dot
+        mtx1 = ch.Ch(np.arange(6).reshape((3,2)))
+        mtx2 = ch.Ch(np.arange(8).reshape((2,4))*10)
         
         mtx3 = dot(mtx1, mtx2)
         #print mtx1.r
@@ -401,7 +391,7 @@ class TestCh(unittest.TestCase):
 
     
     def test_ndim(self):
-        vs = [Ch(np.random.randn(6).reshape(2,3)) for i in range(6)]        
+        vs = [ch.Ch(np.random.randn(6).reshape(2,3)) for i in range(6)]        
         res = vs[0] + vs[1] - vs[2] * vs[3] / (vs[4] ** 2) ** vs[5]
         self.assertTrue(res.shape[0]==2 and res.shape[1]==3)
         res = (vs[0] + 1) + (vs[1] - 2) - (vs[2] * 3) * (vs[3] / 4)  / (vs[4] ** 2) ** vs[5]
@@ -410,7 +400,7 @@ class TestCh(unittest.TestCase):
         
 
     def test_indexing(self):
-        big = Ch(np.arange(60).reshape((10,6)))
+        big = ch.Ch(np.arange(60).reshape((10,6)))
         little = big[1:3, 3:6]
         self.assertTrue(np.max(np.abs(little.r - np.array([[9,10,11],[15,16,17]]))) == 0)
         
@@ -428,7 +418,7 @@ class TestCh(unittest.TestCase):
     def test_redundancy_removal(self):
 
         for MT in [False, True]:
-            x1, x2 = Ch(10), Ch(20)
+            x1, x2 = ch.Ch(10), ch.Ch(20)
             x1_plus_x2_1 = x1 + x2
             x1_plus_x2_2 = x1 + x2
             redundant_sum = (x1_plus_x2_1 + x1_plus_x2_2) * 2
@@ -444,7 +434,7 @@ class TestCh(unittest.TestCase):
         f = lambda a, b, c, d, e : a + (b * c) - d ** e
 
         # Set up our objects
-        Cs = [Ch(v) for v in vals]
+        Cs = [ch.Ch(v) for v in vals]
         C_result = f(*Cs)
 
         # Sometimes residuals should be cached
@@ -481,7 +471,7 @@ class TestCh(unittest.TestCase):
         f = lambda a, b, c, d, e : a + (b * c) - d ** e
 
         # Set up our objects
-        Cs = [Ch(v) for v in vals]
+        Cs = [ch.Ch(v) for v in vals]
         C_result = f(*Cs)
 
         # Set up Theano's equivalents
@@ -514,7 +504,7 @@ class TestCh(unittest.TestCase):
             f = lambda a, b, c, d, e : a + (b * c) - d ** e
 
             # Set up our objects
-            Cs = [Ch(v) for v in vals]
+            Cs = [ch.Ch(v) for v in vals]
             C_result = f(*Cs)
             C_result.MT = MT
 

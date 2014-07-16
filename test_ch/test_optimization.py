@@ -9,11 +9,12 @@ See LICENCE.txt for licensing and contact information.
 import time
 from numpy import *
 import unittest
-import chumpy as ch
-from chumpy import Ch
+import ch
+from optimization import minimize
+from ch import Ch
 import numpy as np
 from scipy.optimize import rosen, rosen_der
-from chumpy.utils import row, col
+from utils import row, col
 
 
 visualize = False
@@ -122,13 +123,13 @@ class TestOptimization(unittest.TestCase):
 
     def test_dogleg_rosen(self):
         obj, freevars = Rosen()
-        ch.minimize(fun=obj, x0=freevars, method='dogleg', options={'maxiter': 337})
+        minimize(fun=obj, x0=freevars, method='dogleg', options={'maxiter': 337})
         self.assertTrue(freevars[0].r[0]==1.)
         self.assertTrue(freevars[1].r[0]==1.)
 
     def test_dogleg_madsen(self):
         obj = Madsen(x = Ch(np.array((3.,1.))))
-        ch.minimize(fun=obj, x0=[obj.x], method='dogleg', options={'maxiter': 34})
+        minimize(fun=obj, x0=[obj.x], method='dogleg', options={'maxiter': 34})
         self.assertTrue(np.sum(obj.r**2)/2 < 0.386599528247)
         
     @unittest.skip('negative sign in exponent screws with reverse mode')
@@ -140,7 +141,7 @@ class TestOptimization(unittest.TestCase):
         self.assertTrue(freevars[1].r[0]==1.)
 
     def test_bfgs_madsen(self):
-        from chumpy import SumOfSquares      
+        from ch import SumOfSquares
         import scipy.optimize
         obj = Ch(lambda x : SumOfSquares(Madsen(x = x)) )
         
@@ -164,7 +165,7 @@ class TestOptimization(unittest.TestCase):
 
         # Optimize with chumpy's minimize (which uses scipy's bfgs).
         obj.x = x0
-        ch.minimize(fun=obj, x0=[obj.x], method='bfgs', options={'maxiter': 8})
+        minimize(fun=obj, x0=[obj.x], method='bfgs', options={'maxiter': 8})
         self.assertTrue(obj.r/2. < 0.386599528247)
 
 

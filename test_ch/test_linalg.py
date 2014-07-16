@@ -9,7 +9,7 @@ See LICENCE.txt for licensing and contact information.
 import numpy as np
 import unittest
 
-from chumpy import Ch
+from ch import Ch
 
 
 
@@ -21,7 +21,7 @@ class TestLinalg(unittest.TestCase):
 
 
     def test_slogdet(self):
-        import chumpy as ch
+        import ch
         tmp = ch.random.randn(100).reshape((10,10))
         # print 'chumpy version: ' + str(slogdet(tmp)[1].r)
         # print 'old version:' + str(np.linalg.slogdet(tmp.r)[1])
@@ -47,7 +47,7 @@ class TestLinalg(unittest.TestCase):
         
 
     def test_lstsq(self):
-        from chumpy.linalg import lstsq
+        from linalg import lstsq
         
         shapes = ([10, 3], [3, 10])
         
@@ -74,7 +74,7 @@ class TestLinalg(unittest.TestCase):
         
 
     def test_pinv(self):
-        from chumpy.linalg import Pinv
+        from linalg import Pinv
         
         data = (np.random.rand(12)-.5).reshape((3, 4))
         pc_tall = Pinv(data)
@@ -102,7 +102,7 @@ class TestLinalg(unittest.TestCase):
             
 
     def test_svd(self):
-        from chumpy.linalg import Svd
+        from linalg import Svd
         eps = 1e-3
         idx = 10
 
@@ -145,7 +145,7 @@ class TestLinalg(unittest.TestCase):
         
         
     def test_det(self):
-        from chumpy.linalg import Det
+        from linalg import Det
         
         mtx1 = Ch(np.sin(2**np.arange(9)).reshape((3,3)))
         mtx1_det = Det(mtx1)
@@ -170,7 +170,7 @@ class TestLinalg(unittest.TestCase):
     
         
     def test_inv1(self):
-        from chumpy.linalg import Inv
+        from linalg import Inv
 
         mtx1 = Ch(np.sin(2**np.arange(9)).reshape((3,3)))
         mtx1_inv = Inv(mtx1)
@@ -192,7 +192,7 @@ class TestLinalg(unittest.TestCase):
         self.assertTrue(np.max(np.abs(mtx1_inv.r - np.linalg.inv(mtx1.r)).ravel()) == 0)
 
     def test_inv2(self):
-        from chumpy.linalg import Inv
+        from linalg import Inv
                 
         eps = 1e-8
         idx = 13
@@ -215,7 +215,7 @@ class TestLinalg(unittest.TestCase):
     def test_inv3(self):
         """Test linalg.inv with broadcasting support."""
         
-        from chumpy.linalg import Inv
+        from linalg import Inv
 
         mtx1 = Ch(np.sin(2**np.arange(12)).reshape((3,2,2)))
         mtx1_inv = Inv(mtx1)

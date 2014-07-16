@@ -49,7 +49,7 @@ if not has_ressources:
 
   
 
-import chumpy as ch
+import ch
 
 
 
@@ -130,11 +130,12 @@ class TestPerformance(unittest.TestCase):
 
     def test_binary_ratios(self):
         ratios = self.compute_binary_ratios(vecsize=5000, numvecs=100)
-        self.assertLess(ratios['add'], 8)
-        self.assertLess(ratios['subtract'], 8)
-        self.assertLess(ratios['multiply'], 8)
-        self.assertLess(ratios['divide'], 4)
-        self.assertLess(ratios['power'], 2)
+        tol = 1e-1
+        self.assertLess(ratios['add'], 8+tol)
+        self.assertLess(ratios['subtract'], 8+tol)
+        self.assertLess(ratios['multiply'], 8+tol)
+        self.assertLess(ratios['divide'], 4+tol)
+        self.assertLess(ratios['power'], 2+tol)
         #print ratios
 
 
@@ -143,7 +144,7 @@ class TestPerformance(unittest.TestCase):
 
 
         # Get times for svd
-        from chumpy.linalg import svd
+        from linalg import svd
         u, s, v = svd(mtx)
         def setup():
             mtx.x = -mtx.x
