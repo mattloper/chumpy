@@ -12,7 +12,7 @@ setup(name='chumpy',
       packages = ['chumpy', 'chumpy.test_ch'],
       package_dir = {'chumpy': '.'},
       author='Matthew Loper',
-      author_email='matt.loper@gmail.com'
+      author_email='matt.loper@gmail.com',
       url='https://github.com/mattloper/chumpy',
       description='chumpy',
       )
