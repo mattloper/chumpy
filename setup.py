@@ -11,5 +11,7 @@ setup(name='chumpy',
       #py_modules=['ch', 'ch_ops', 'linalg', 'utils', 'api_compatibility', 'ch_random', 'test_ch', 'test_inner_composition', 'test_linalg'],
       packages = ['chumpy', 'chumpy.test_ch'],
       package_dir = {'chumpy': '.'}
+      author='Matthew Loper',
+      author_email='matt.loper@gmail.com'
       )
 
