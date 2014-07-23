@@ -620,7 +620,7 @@ class Ch(object):
         
         drs = []
         direct_dr = self.compute_lop(wrt, lhs)
-        if direct_dr != None:
+        if direct_dr is not None:
             drs.append(direct_dr)
 
         for k in set(self.dterms):
