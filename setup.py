@@ -13,5 +13,7 @@ setup(name='chumpy',
       package_dir = {'chumpy': '.'}
       author='Matthew Loper',
       author_email='matt.loper@gmail.com'
+      url='https://github.com/mattloper/chumpy',
+      description='chumpy',
       )
 
