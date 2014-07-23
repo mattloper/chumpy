@@ -664,7 +664,7 @@ class Ch(object):
 
         direct_dr = self._compute_dr_wrt_sliced(wrt)
 
-        if direct_dr != None:
+        if direct_dr is not None:
             drs.append(direct_dr)                
 
         propnames = set(_props_for(self.__class__))
@@ -685,10 +685,10 @@ class Ch(object):
                         indirect_dr = p.lmult_wrt(lhs, wrt)
                 else: # forward mode
                     dr2 = p.dr_wrt(wrt)
-                    if dr2 != None:
+                    if dr2 is not None:
                         indirect_dr = self.compute_rop(p, rhs=dr2)
 
-                if indirect_dr != None:
+                if indirect_dr is not None:
                     drs.append(indirect_dr)
 
         if len(drs)==0:
