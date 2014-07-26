@@ -7,7 +7,7 @@ minimization of objectives easier. Specifically, it provides:
 - Easy access to derivatives via auto differentiation
 - Easy local optimization methods (12 of them: most of which use the derivatives) 
 
-Chumpy comes with its own demos, which can be seen by typing the following:
+Chumpy comes with its own demos, which can be seen by typing the following::
 
 >> import chumpy
 >> chumpy.demo() # prints out a list of possible demos
