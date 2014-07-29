@@ -60,6 +60,7 @@ class Term(object):
 class Ch(object):
     terms = []
     dterms = ['x']
+    __array_priority__ = 2.0
 
     _cached_parms = {}
     _setup_terms = {}
