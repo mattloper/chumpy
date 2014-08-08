@@ -704,8 +704,8 @@ class dot(ch.Ch):
     
     def compute_d1(self):
         # To stay consistent with numpy, we must upgrade 1D arrays to 2D
-        ar = row(self.a.r) if len(self.a.r.shape)<2 else self.a.r
-        br = col(self.b.r) if len(self.b.r.shape)<2 else self.b.r
+        ar = row(self.a.r) if len(self.a.r.shape)<2 else self.a.r.reshape((-1, self.a.r.shape[-1]))
+        br = col(self.b.r) if len(self.b.r.shape)<2 else self.b.r.reshape((self.b.r.shape[0], -1))
 
         if ar.ndim <= 2:
             return sp.kron(sp.eye(ar.shape[0], ar.shape[0]),br.T)
@@ -715,8 +715,8 @@ class dot(ch.Ch):
     def compute_d2(self):
         
         # To stay consistent with numpy, we must upgrade 1D arrays to 2D
-        ar = row(self.a.r) if len(self.a.r.shape)<2 else self.a.r
-        br = col(self.b.r) if len(self.b.r.shape)<2 else self.b.r
+        ar = row(self.a.r) if len(self.a.r.shape)<2 else self.a.r.reshape((-1, self.a.r.shape[-1]))
+        br = col(self.b.r) if len(self.b.r.shape)<2 else self.b.r.reshape((self.b.r.shape[0], -1))
 
         if br.ndim <= 1:
             return self.ar
