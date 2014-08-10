@@ -482,14 +482,13 @@ class Ch(object):
                 else: 
                     raise Exception("Can't set array that is function of arrays.")
 
-            
+            self = self[key]
             dr = self.dr_wrt(inner)
             dr_rev = dr.T
             #dr_rev = np.linalg.pinv(dr)
             inner_shape = inner.shape
 
-
-            t1 = self._superdot(dr_rev, value.ravel())
+            t1 = self._superdot(dr_rev, np.asarray(value).ravel())
             t2 = self._superdot(dr_rev, self._superdot(dr, inner.x.ravel()))
             if sp.issparse(t1): t1 = np.array(t1.todense())
             if sp.issparse(t2): t2 = np.array(t2.todense())

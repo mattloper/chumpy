@@ -415,6 +415,11 @@ class TestCh(unittest.TestCase):
         self.assertTrue(np.max(np.abs(little.r - np.array([15, 16]))) == 0.)
         _ =  little.dr_wrt(big)
 
+        # Tests assignment through reorderings
+        aa = ch.arange(4*4*4).reshape((4,4,4))[:3,:3,:3]
+        aa[0,1,2] = 100
+        self.assertTrue(aa[0,1,2].r[0] == 100)
+
     def test_redundancy_removal(self):
 
         for MT in [False, True]:
