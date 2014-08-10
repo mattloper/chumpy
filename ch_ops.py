@@ -13,6 +13,7 @@ __all__ = ['array', 'amax','amin', 'max', 'min', 'maximum','minimum','nanmax','n
             'sqrt', 'square', 'absolute', 'abs', 'clip',
             'power',
             'add', 'divide', 'multiply', 'negative', 'subtract', 'reciprocal',
+            'nan_to_num',
             'dot', 'cumsum',
             'floor', 'ceil',
             'greater', 'greater_equal', 'less', 'less_equal', 'equal', 'not_equal',
@@ -223,7 +224,12 @@ class UnaryElemwise(ch.Ch):
         if wrt is self.x:
             result = self._d(self.x.r)
             return sp.diags([result.ravel()], [0]) if len(result)>1 else np.atleast_2d(result)
-    
+
+
+class nan_to_num(UnaryElemwise):
+    _r = lambda self, x : np.nan_to_num(x)
+    _d = lambda self, x : np.asarray(np.isfinite(x), np.float64)
+
 class reciprocal(UnaryElemwise):
     _r = np.reciprocal
     _d = lambda self, x : -np.reciprocal(np.square(x))
