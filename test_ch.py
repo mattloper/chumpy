@@ -420,6 +420,13 @@ class TestCh(unittest.TestCase):
         aa[0,1,2] = 100
         self.assertTrue(aa[0,1,2].r[0] == 100)
 
+        # Tests assignment through reorderings (NaN's are a special case)
+        aa = ch.arange(9).reshape((3,3))
+        aa[1,1] = np.nan
+        self.assertTrue(np.isnan(aa.r[1,1]))
+        self.assertFalse(np.isnan(aa.r[0,0]))
+
+
     def test_redundancy_removal(self):
 
         for MT in [False, True]:

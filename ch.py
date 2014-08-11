@@ -493,7 +493,7 @@ class Ch(object):
             if sp.issparse(t1): t1 = np.array(t1.todense())
             if sp.issparse(t2): t2 = np.array(t2.todense())
 
-            inner.x += t1.reshape(inner_shape) - t2.reshape(inner_shape)
+            inner.x = inner.x + t1.reshape(inner_shape) - t2.reshape(inner_shape)
             #inner.x = inner.x + self._superdot(dr_rev, value.ravel()).reshape(inner_shape) - self._superdot(dr_rev, self._superdot(dr, inner.x.ravel())).reshape(inner_shape)
 
 
