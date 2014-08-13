@@ -394,8 +394,22 @@ class Ch(object):
 
         if itr is None or itr != self._itr:
             for parent, parent_dict in self._parents.items():
-                if parent._cache['r'] is not None or len(parent._cache['drs']):
-                    parent.clear_cache(itr=itr)
+                
+                ## Clearing the cache like this depends on cache being a signal
+                ## about whether parents' cache is cleared, which conflicts
+                ## with certain memory policies.
+                ##
+                ## So we now instead depend on "itr" to deal with the performance issue
+                ## of not traversing all paths during cache clearing.
+                ##
+                ## It's not ideal though. Worth more thought.
+                ##
+                #
+                #if parent._cache['r'] is not None or len(parent._cache['drs']):
+                #   parent.clear_cache(itr=itr)
+                
+                parent.clear_cache(itr=itr)
+                
                 object.__setattr__(parent, '_dirty_vars', parent._dirty_vars.union(parent_dict['varnames']))
                 parent._invalidate_cacheprop_names(parent_dict['varnames'])
 
@@ -704,7 +718,17 @@ class Ch(object):
         if (result is not None) and (not sp.issparse(result)):
             result = np.atleast_2d(result)
         
-        self._cache['drs'][wrt] = result
+        # When the number of parents is one, it indicates that
+        # caching this is probably not useful because not 
+        # more than one parent will likely ask for this same
+        # thing again in the same iteration of an optimization.
+        #
+        # If we *always* filled in the cache, it would require 
+        # more memory but would occasionally save a little cpu,
+        # on average.
+        if len(self._parents.keys()) != 1:
+            self._cache['drs'][wrt] = result
+
         return result
 
 
@@ -716,7 +740,8 @@ class Ch(object):
     ########################################################
     # Visualization
 
-    def show_tree(self):
+    def show_tree(self, cachelim=np.inf):
+        """Cachelim is in Mb. For any cached jacobians above cachelim, they are also added to the graph. """
         
         import tempfile
         import subprocess
@@ -739,9 +764,55 @@ class Ch(object):
                         result += ['%s [label="%s"];' % (src, my_name)]
                         result += ['%s [label="%s"];' % (dst, child_label)]
                         result += string_for(getattr(self, dterm), dterm)
+
+            if cachelim != np.inf and hasattr(self, '_cache') and 'drs' in self._cache:
+                import cPickle as pickle
+                for dtval, jac in self._cache['drs'].items():
+                    # child_label = getattr(dtval, 'label') if hasattr(dtval, 'label') else dterm
+                    # child_label = '%s (%s)' % (child_label, str(dtval.__class__.__name__))
+                    src = 'aaa%d' % (id(self))
+                    dst = 'aaa%d' % (id(dtval))
+                    try:                    
+                        sz = sys.getsizeof(pickle.dumps(jac, -1))
+                    except: # some are functions
+                        sz = 0
+                    # colorattr = "#%02x%02x%02x" % (szpct*255, 0, (1-szpct)*255)
+                    # print colorattr
+                    if sz > (cachelim * 1024 * 1024):
+                        result += ['%s -> %s [style=dotted,color="<<<%d>>>"];' % (src, dst, sz)]
+                    #
+                    # result += ['%s -> %s [style=dotted];' % (src, dst)]
+                    # result += ['%s [label="%s"];' % (src, my_name)]
+                    # result += ['%s [label="%s"];' % (dst, child_label)]
+                    # result += string_for(getattr(self, dterm), dterm)
+                    
             return result
 
         dot_file_contents = 'digraph G {\n%s\n}' % '\n'.join(list(set(string_for(self, 'root'))))
+        if cachelim != np.inf:
+            import re
+            strs = re.findall(r'<<<(\d+)>>>', dot_file_contents, re.DOTALL)
+            if len(strs) > 0:
+                the_max = np.max(np.array([int(d) for d in strs]))
+                for s in strs:
+                    szpct = float(s)/the_max
+                    sz = float(s)
+                    unit = 'b'
+                    if sz > 1024.: 
+                        sz /= 1024
+                        unit = 'K'
+                    if sz > 1024.: 
+                        sz /= 1024
+                        unit = 'M'
+                    if sz > 1024.: 
+                        sz /= 1024
+                        unit = 'G'
+                    if sz > 1024.: 
+                        sz /= 1024
+                        unit = 'T'
+                        
+                    dot_file_contents = re.sub('<<<%s>>>' % s, '#%02x%02x%02x",label="%d%s' % (szpct*255, 0, (1-szpct)*255, sz, unit), dot_file_contents)
+
         dot_file = tempfile.NamedTemporaryFile()
         dot_file.write(dot_file_contents)
         dot_file.flush()
