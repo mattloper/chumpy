@@ -517,6 +517,12 @@ class Ch(object):
     def __repr__(self):
         return object.__repr__(self) + '\n' + str(self.r)
 
+    def __float__(self):
+        return self.r.__float__()
+
+    def __int__(self):
+        return self.r.__int__()
+
     def on_changed(self, terms):
         pass
         

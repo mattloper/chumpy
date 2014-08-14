@@ -30,6 +30,11 @@ class TestCh(unittest.TestCase):
         self.assertTrue(result.dr_wrt(bb).nnz > 0)
         self.assertTrue(result.dr_wrt(cc).nnz > 0)
 
+    def test_casting(self):
+        for fn in float, int:
+            self.assertEqual(fn(np.array(5)),     fn(ch.array(5)))
+            self.assertEqual(fn(np.array([[5]])), fn(ch.array([[5]])))
+
     def test_tensordot(self):
         an = np.arange(60.).reshape(3,4,5)
         bn = np.arange(24.).reshape(4,3,2)
