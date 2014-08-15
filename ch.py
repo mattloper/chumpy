@@ -583,6 +583,9 @@ class Ch(object):
                     return np.hstack([np.array(lhs.dot(rhs[:,i].todense())) for i in range(rhs.shape[1])])
                 else:
                     return lhs.matmat(rhs)
+            
+            # TODO: Figure out how/whether to do this.
+            #lhs, rhs = utils.convert_inputs_to_sparse_if_possible(lhs, rhs)
 
             if not sp.issparse(lhs) and sp.issparse(rhs):
                 return rhs.T.dot(lhs.T).T
@@ -719,6 +722,13 @@ class Ch(object):
 
         else:
             result = reduce(lambda x, y: x+y, drs)
+
+        # TODO: figure out how/whether to do this.
+        # if result is not None and not sp.issparse(result):
+        #    nonzero = np.count_nonzero(result)
+        #    if nonzero > 0 and hasattr(result, 'size') and result.size / nonzero >= 10.0:
+        #         #import pdb; pdb.set_trace()
+        #         result = sp.csc_matrix(result)
             
             
         if (result is not None) and (not sp.issparse(result)):
