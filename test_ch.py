@@ -16,6 +16,25 @@ import ch
 
 class TestCh(unittest.TestCase):
     
+    def test_cachehits(self):
+        """Test how many nodes are visited when cache is cleared. 
+        If the number of hits changes, it has to be carefully
+        looked at to make sure that correctness and performance
+        don't get messed up by a change."""
+        
+        a = ch.array(1)
+        b = ch.array(2)
+        c = a
+        for i in range(10):
+            c = a + c + b
+    
+        c.dr_wrt(a)
+        c.dr_wrt(b)
+        self.assertEqual(a.clear_cache() + b.clear_cache(), 59)
+        c.dr_wrt(a)
+        c.dr_wrt(b)
+        self.assertEqual(a.clear_cache(123) + b.clear_cache(123), 41)
+    
     def test_nested_concatenate(self):
         aa = ch.arange(3)
         bb = ch.arange(4)

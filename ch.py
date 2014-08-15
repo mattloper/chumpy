@@ -389,32 +389,26 @@ class Ch(object):
         
         
     def clear_cache(self, itr=None):
-        self._cache['r'] = None
-        self._cache['drs'].clear()
+        todo = [self]
+        done = set([])
+        nodes_visited = 0
+        while len(todo) > 0:
+            nodes_visited += 1
+            next = todo.pop()
+            if itr is not None and itr==next._itr:
+                continue
+            if id(next) not in done:
+                next._cache['r'] = None
+                next._cache['drs'].clear()
+                next._itr = itr
 
-        if itr is None or itr != self._itr:
-            for parent, parent_dict in self._parents.items():
-                
-                ## Clearing the cache like this depends on cache being a signal
-                ## about whether parents' cache is cleared, which conflicts
-                ## with certain memory policies.
-                ##
-                ## So we now instead depend on "itr" to deal with the performance issue
-                ## of not traversing all paths during cache clearing.
-                ##
-                ## It's not ideal though. Worth more thought.
-                ##
-                #
-                #if parent._cache['r'] is not None or len(parent._cache['drs']):
-                #   parent.clear_cache(itr=itr)
-                
-                parent.clear_cache(itr=itr)
-                
-                object.__setattr__(parent, '_dirty_vars', parent._dirty_vars.union(parent_dict['varnames']))
-                parent._invalidate_cacheprop_names(parent_dict['varnames'])
-
-        object.__setattr__(self, '_itr', itr)
-
+                for parent, parent_dict in next._parents.items():
+                    object.__setattr__(parent, '_dirty_vars', parent._dirty_vars.union(parent_dict['varnames']))
+                    parent._invalidate_cacheprop_names(parent_dict['varnames']) 
+                    todo.append(parent)
+                done.add(id(next))
+        return nodes_visited
+            
         
     def replace(self, old, new):
         if (hasattr(old, 'dterms') != hasattr(new, 'dterms')):
