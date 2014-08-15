@@ -1,4 +1,4 @@
-from .ch import *
+from ch import *
 from logic import *
 
 from optimization import minimize

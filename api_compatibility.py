@@ -5,7 +5,7 @@ See LICENCE.txt for licensing and contact information.
 """
 
 
-import chumpy as ch
+import ch
 import numpy as np
 from os.path import join, split
 from StringIO import StringIO
