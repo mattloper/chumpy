@@ -53,27 +53,6 @@ class gamma(ch.Ch):
             d = scipy.special.polygamma(0, self.x.r)*self.r
             return sp.diags([d.ravel()], [0])
 
-class KillNans(ch.Ch):
-    dterms = 'x'
-
-    def on_changed(self, which):
-        self.nans = np.isnan(self.x.r.ravel())
-        self.length = self.x.r.size
-
-    def compute_r(self):
-        result = self.x.r.copy()
-        result.ravel()[self.nans] = 0
-        return result
-
-    def compute_dr_wrt(self, wrt):
-        if wrt is self.x:
-            retained = np.nonzero(np.logical_not(self.nans))[0]
-            IS = retained
-            JS = retained
-            data = np.ones_like(IS)
-            return sp.csc_matrix((data, (IS, JS)), shape=(self.length, self.length))
-
-
 # This function is based directly on the "moment" function
 # in scipy, specifically in mstats_basic.py.
 def moment(a, moment=1, axis=0):
