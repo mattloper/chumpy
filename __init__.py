@@ -3,6 +3,7 @@ from logic import *
 
 from optimization import minimize
 import extras
+import testing
 
 from numpy import bool, int, float, complex, object, unicode, str, nan, inf
 
