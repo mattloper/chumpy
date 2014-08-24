@@ -30,6 +30,15 @@ def norm(x, ord=None, axis=None):
 
     return ch.sqrt(ch.sum(x**2))
 
+# This version works but derivatives are too slow b/c of nested loop in Svd implementation.
+# def lstsq(a, b):
+#     u, s, v = Svd(a)
+#     x = (v.T / s).dot(u.T.dot(b))
+#     residuals = NotImplementedError # ch.sum((a.dot(x) - b)**2, axis=0)
+#     rank = NotImplementedError
+#     s = NotImplementedError
+#     return x, residuals, rank, s
+
 def lstsq(a, b, rcond=-1):
     if rcond != -1:
         raise Exception('non-default rcond not yet implemented')
