@@ -27,6 +27,20 @@ print result # prints [ 60.]
 print result.dr_wrt(x1) # prints 1
 """
 
+demos['show_tree'] = """
+import chumpy as ch
+
+[x1, x2, x3] = ch.array(10), ch.array(20), ch.array(30)
+for i in range(3): x2 = x1 + x2 + x3
+
+x2.dr_wrt(x1) # pull cache 
+x2.dr_wrt(x3) # pull cache
+x1.label='x1' # for clarity in show_tree()
+x2.label='x2' # for clarity in show_tree()
+x3.label='x3' # for clarity in show_tree()
+x2.show_tree(cachelim=1e-4) # in MB
+"""
+
 demos['matrix'] = """
 import chumpy as ch
 
