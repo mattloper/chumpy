@@ -281,13 +281,15 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
         if on_step is not None:
             on_step(obj)
 
+        report_line = ""
         if len(labels) > 0:
-            sys.stderr.write('%.2e | ' % (np.sum(obj.r**2),))
+            report_line += '%.2e | ' % (np.sum(obj.r**2),)
         for label in sorted(labels.keys()):
             objective = labels[label]
-            sys.stderr.write('%s: %.2e | ' % (label, np.sum(objective.r**2)))
+            report_line += '%s: %.2e | ' % (label, np.sum(objective.r**2))
         if len(labels) > 0:
-            sys.stderr.write('\n')
+            report_line += '\n'
+        sys.stderr.write(report_line)
 
     call_cb()
 
