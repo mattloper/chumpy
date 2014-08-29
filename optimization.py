@@ -21,11 +21,16 @@ from utils import row, col
 import scipy.sparse as sp
 import scipy.sparse
 import scipy.optimize
+from scipy.sparse.linalg.interface import LinearOperator
 
 
 
-vstack = lambda x : sp.vstack(x, format='csc') if any([sp.issparse(a) for a in x]) else np.vstack(x)
-hstack = lambda x : sp.hstack(x, format='csc') if any([sp.issparse(a) for a in x]) else np.hstack(x)
+def vstack(x):
+    x = [a if not isinstance(a, LinearOperator) else a.dot(np.eye(a.shape[1])) for a in x]
+    return sp.vstack(x, format='csc') if any([sp.issparse(a) for a in x]) else np.vstack(x)
+def hstack(x):
+    x = [a if not isinstance(a, LinearOperator) else a.dot(np.eye(a.shape[1])) for a in x]
+    return sp.hstack(x, format='csc') if any([sp.issparse(a) for a in x]) else np.hstack(x)
 
 
 # Nelder-Mead

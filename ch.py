@@ -572,18 +572,20 @@ class Ch(object):
             if isinstance(lhs, numbers.Number) or isinstance(rhs, numbers.Number):
                 return lhs * rhs
 
-            if isinstance(lhs, LinearOperator):
-                if sp.issparse(rhs): # not ideal. make faster?
-                    return np.hstack([np.array(lhs.dot(rhs[:,i].todense())) for i in range(rhs.shape[1])])
+            if isinstance(rhs, LinearOperator):
+                return LinearOperator((lhs.shape[0], rhs.shape[1]), lambda x : lhs.dot(rhs.dot(x)))
+
+            if isinstance(lhs, LinearOperator):                
+                if sp.issparse(rhs):
+                    return LinearOperator((lhs.shape[0], rhs.shape[1]), lambda x : lhs.dot(rhs.dot(x)))
                 else:
-                    return lhs.matmat(rhs)
+                    return lhs.dot(rhs)
             
             # TODO: Figure out how/whether to do this.
             #lhs, rhs = utils.convert_inputs_to_sparse_if_possible(lhs, rhs)
 
             if not sp.issparse(lhs) and sp.issparse(rhs):
                 return rhs.T.dot(lhs.T).T
-                
     
             return lhs.dot(rhs)
         except:
@@ -664,12 +666,12 @@ class Ch(object):
 
             
         return result
-            
         
     def compute_rop(self, wrt, rhs):
         dr = self._compute_dr_wrt_sliced(wrt)
         if dr is None: return None
-        return self._superdot(dr, rhs) if not isinstance(rhs, LinearOperator) else dr.matmat(rhs)
+        
+        return self._superdot(dr, rhs)
 
     def dr_wrt(self, wrt, reverse_mode=False):
         self._call_on_changed()
@@ -691,8 +693,7 @@ class Ch(object):
             if hasattr(p, 'dterms') and p is not wrt:
 
                 indirect_dr = None
-                #if isinstance(direct_dr, sp.linalg.interface.LinearOperator):
-                #    indirect_dr = dr_wrt_r.matmat(prev_jac)
+
                 if reverse_mode:
                     lhs = self._compute_dr_wrt_sliced(p)
                     if isinstance(lhs, LinearOperator):
@@ -715,7 +716,10 @@ class Ch(object):
             result = drs[0]
 
         else:
-            result = reduce(lambda x, y: x+y, drs)
+            if not np.any([isinstance(a, LinearOperator) for a in drs]):
+                result = reduce(lambda x, y: x+y, drs)
+            else:
+                result = LinearOperator(drs[0].shape, lambda x : reduce(lambda a, b: a.dot(x)+b.dot(x),drs))
 
         # TODO: figure out how/whether to do this.
         # if result is not None and not sp.issparse(result):
@@ -725,9 +729,9 @@ class Ch(object):
         #         result = sp.csc_matrix(result)
             
             
-        if (result is not None) and (not sp.issparse(result)):
+        if (result is not None) and (not sp.issparse(result)) and (not isinstance(result, LinearOperator)):
             result = np.atleast_2d(result)
-        
+            
         # When the number of parents is one, it indicates that
         # caching this is probably not useful because not 
         # more than one parent will likely ask for this same
