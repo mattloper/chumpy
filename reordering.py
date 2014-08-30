@@ -25,7 +25,6 @@ def ravel(a, order='C'):
 
     return reshape(a=a, newshape=(-1,))
 
-
 class Reorder(Permute):
     dterms = 'a',
 
@@ -38,17 +37,21 @@ class Reorder(Permute):
         
     def compute_dr_wrt(self, wrt):
         if wrt is self.a:
-            a = self.a
-            asz = a.size
-            ashape = a.shape
-            key = self.unique_reorder_id()
-            if key not in self.dr_lookup or key is None:
-                JS = self.reorder(np.arange(asz).reshape(ashape))
-                IS = np.arange(JS.size)
-                data = np.ones_like(IS)
-                shape = JS.shape
-                self.dr_lookup[key] = sp.csc_matrix((data, (IS, JS.ravel())), shape=(self.r.size, wrt.r.size))
-            return self.dr_lookup[key]
+            if True:
+                from scipy.sparse.linalg.interface import LinearOperator
+                return LinearOperator((self.size, wrt.size), lambda x : self.reorder(x.reshape(self.a.shape)).ravel())
+            else:
+                a = self.a
+                asz = a.size
+                ashape = a.shape
+                key = self.unique_reorder_id()
+                if key not in self.dr_lookup or key is None:
+                    JS = self.reorder(np.arange(asz).reshape(ashape))
+                    IS = np.arange(JS.size)
+                    data = np.ones_like(IS)
+                    shape = JS.shape
+                    self.dr_lookup[key] = sp.csc_matrix((data, (IS, JS.ravel())), shape=(self.r.size, wrt.r.size))
+                return self.dr_lookup[key]
                  
 class Sort(Reorder):
     dterms = 'a'
