@@ -208,6 +208,7 @@ class TestCh(unittest.TestCase):
     #    print c.dr_wrt(a)
     #    print c.compute_drs_wrt(a).r
     
+    @unittest.skip('We are using LinearOperator for this for now. Might change back though.')
     def test_reorder_caching(self):
         a = ch.Ch(np.zeros(8).reshape((4,2)))
         b = a.T
@@ -221,12 +222,14 @@ class TestCh(unittest.TestCase):
     
     def test_transpose(self):
         from utils import row, col
+        from copy import deepcopy
         for which in ('C', 'F'): # test in fortran and contiguous mode
             a = ch.Ch(np.require(np.zeros(8).reshape((4,2)), requirements=which))
             b = a.T
         
             b1 = b.r.copy()
-            dr = b.dr_wrt(a).copy()
+            #dr = b.dr_wrt(a).copy()
+            dr = deepcopy(b.dr_wrt(a))
         
             diff = np.arange(a.size).reshape(a.shape)
             a.x = np.require(a.r + diff, requirements=which)
@@ -234,7 +237,7 @@ class TestCh(unittest.TestCase):
             
             diff_pred = dr.dot(col(diff)).ravel()
             diff_emp =  (b2 - b1).ravel()
-            np.testing.assert_array_equal(diff_pred, diff_emp) 
+            np.testing.assert_array_equal(diff_pred, diff_emp)             
     
 
     def test_unary(self):

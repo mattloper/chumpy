@@ -7,7 +7,7 @@ See LICENCE.txt for licensing and contact information.
 from distutils.core import setup
 
 setup(name='chumpy',
-    version='0.57',
+    version='0.58',
     #py_modules=['ch', 'ch_ops', 'linalg', 'utils', 'api_compatibility', 'ch_random', 'test_ch', 'test_inner_composition', 'test_linalg'],
     packages = ['chumpy'],
     package_dir = {'chumpy': '.'},
@@ -16,7 +16,7 @@ setup(name='chumpy',
     url='https://github.com/mattloper/chumpy',
     description='chumpy',
     license='MIT',
-    install_requires=['numpy >= 1.8.1', 'scipy >= 0.11.0'],
+    install_requires=['numpy >= 1.8.1', 'scipy >= 0.13.0'],
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
