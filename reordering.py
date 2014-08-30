@@ -37,7 +37,7 @@ class Reorder(Permute):
         
     def compute_dr_wrt(self, wrt):
         if wrt is self.a:
-            if True:
+            if False:
                 from scipy.sparse.linalg.interface import LinearOperator
                 return LinearOperator((self.size, wrt.size), lambda x : self.reorder(x.reshape(self.a.shape)).ravel())
             else:
