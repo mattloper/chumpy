@@ -7,5 +7,6 @@ before_install:
   - sudo add-apt-repository ppa:pylab/stable -y
   - sudo apt-get update -q
   - sudo apt-get install -qq libopenblas-dev liblapack-dev gfortran # install these ones first
-  - sudo apt-get install -qq python-numpy python-scipy
+  - sudo apt-get install -qq python-numpy
+  - sudo pip install scipy==0.13.0
 script: make test
