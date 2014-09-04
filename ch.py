@@ -119,7 +119,7 @@ class Ch(object):
 
     @classmethod
     def setup_terms(cls):
-        if cls.__name__ in cls._setup_terms: return
+        if id(cls) in cls._setup_terms: return
 
         if cls == Ch:
             return
@@ -147,7 +147,7 @@ class Ch(object):
                 cls.term_order = list(cls.terms) + list(cls.dterms)
 
         _check_kw_conflict(cls)
-        cls._setup_terms[cls.__name__] = True
+        cls._setup_terms[id(cls)] = True
 
 
     ########################################################
