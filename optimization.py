@@ -14,6 +14,7 @@ import sys
 import time
 import numpy as np
 from numpy.linalg import norm
+import scipy.sparse.linalg as splinalg
 
 import ch, utils
 from utils import row, col
@@ -22,6 +23,8 @@ import scipy.sparse as sp
 import scipy.sparse
 import scipy.optimize
 from scipy.sparse.linalg.interface import LinearOperator
+from scipy.sparse.linalg import aslinearoperator, LinearOperator
+
 
 
 
@@ -50,6 +53,9 @@ def minimize(fun, x0, method='dogleg', bounds=None, constraints=(), tol=None, ca
     if method == 'dogleg':
         if options is None: options = {}
         return _minimize_dogleg(fun, free_variables=x0, on_step=callback, **options)
+    if method == 'dogleg2':
+        if options is None: options = {}
+        return _minimize_dogleg2(fun, free_variables=x0, on_step=callback, **options)
 
     if isinstance(fun, list) or isinstance(fun, tuple):
         fun = ch.concatenate([f.ravel() for f in fun])
@@ -458,6 +464,234 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
                     A = J.T.dot(J)
                     r = col(r_trial)
                     g = col(J.T.dot(-r))
+                    pif('A and g updated in %.2fs' % (time.time() - tm))
+                    
+                    if norm(g, np.inf) < e_1:
+                        stop = True
+                        pif('stopping because norm(g, np.inf) < %.2e' % (e_1))
+
+                # update our trust region
+                delta = updateRadius(rho, delta, d_dl)
+                
+                if delta <= e_2*norm(p):
+                    stop = True
+                    pif('stopping because trust region is too small')
+
+            # the following "collect" is very expensive.
+            # please contact matt if you find situations where it actually helps things.
+            #import gc; gc.collect()
+            if stop or improvement_occurred or (fevals >= max_fevals):
+                break
+        if k >= k_max:
+            pif('stopping because max number of user-specified iterations (%d) has been met' % (k_max,))
+        elif fevals >= max_fevals:
+            pif('stopping because max number of user-specified func evals (%d) has been met' % (max_fevals,))
+
+    return obj.free_variables
+
+
+def _minimize_dogleg2(obj, free_variables, on_step=None,
+                     maxiter=200, max_fevals=np.inf, sparse_solver='cg',
+                     disp=False, show_residuals=None, e_1=1e-15, e_2=1e-15, e_3=0., delta_0=None):
+
+    """"Nonlinear optimization using Powell's dogleg method.
+
+    See Lourakis et al, 2005, ICCV '05, "Is Levenberg-Marquardt
+    the Most Efficient Optimization for Implementing Bundle
+    Adjustment?":
+    http://www.ics.forth.gr/cvrl/publications/conferences/0201-P0401-lourakis-levenberg.pdf
+    """
+
+    if show_residuals is not None:
+        import warnings
+        warnings.warn('minimize_dogleg: show_residuals parm is deprecaed, pass a dict instead.')
+
+    labels = {}
+    if isinstance(obj, list) or isinstance(obj, tuple):
+        obj = ch.concatenate([f.ravel() for f in obj])
+    elif isinstance(obj, dict):
+        labels = obj
+        obj = ch.concatenate([f.ravel() for f in obj.values()])
+
+
+    niters = maxiter
+    verbose = disp
+    num_unique_ids = len(np.unique(np.array([id(freevar) for freevar in free_variables])))
+    if num_unique_ids != len(free_variables):
+        raise Exception('The "free_variables" param contains duplicate variables.')
+        
+    obj = ChInputsStacked(obj=obj, free_variables=free_variables, x=np.concatenate([freevar.r.ravel() for freevar in free_variables]))
+
+    def call_cb():
+        if on_step is not None:
+            on_step(obj)
+
+        report_line = ""
+        if len(labels) > 0:
+            report_line += '%.2e | ' % (np.sum(obj.r**2),)
+        for label in sorted(labels.keys()):
+            objective = labels[label]
+            report_line += '%s: %.2e | ' % (label, np.sum(objective.r**2))
+        if len(labels) > 0:
+            report_line += '\n'
+        sys.stderr.write(report_line)
+
+    call_cb()
+
+    # pif = print-if-verbose.
+    # can't use "print" because it's a statement, not a fn
+    pif = lambda x: sys.stdout.write(x + '\n') if verbose else 0
+
+    if callable(sparse_solver):
+        solve = sparse_solver
+    elif isinstance(sparse_solver, str) and sparse_solver in _solver_fns.keys():
+        solve = _solver_fns[sparse_solver]
+    else:
+        raise Exception('sparse_solver argument must be either a string in the set (%s) or have the api of scipy.sparse.linalg.spsolve.' % ''.join(_solver_fns.keys(), ' '))
+
+    # optimization parms
+    k_max = niters
+    fevals = 0
+
+    k = 0
+    delta = delta_0
+    p = col(obj.x.r) 
+
+    fevals += 1
+    
+    tm = time.time()
+    pif('computing Jacobian...')
+    
+    J0 = obj.J
+    J = LinearOperator(shape=J0.shape, matvec=lambda x : J0.dot(x), rmatvec=lambda x : J0.rmatvec(x) if hasattr(J0, 'rmatvec') else J0.T.dot(x), dtype=np.float64)
+    #J = aslinearoperator(obj.J)
+
+    pif('Jacobian (%dx%d) computed in %.2fs' % (J.shape[0], J.shape[1], time.time() - tm))
+    
+    if J.shape[1] != p.size:
+        import pdb; pdb.set_trace()
+    assert(J.shape[1] == p.size)
+    
+    tm = time.time()
+    pif('updating A and g...')
+    A = LinearOperator(shape=(J.shape[1], J.shape[1]), matvec=lambda x : J.rmatvec(J.matvec(x)), dtype=np.float64)
+    r = col(obj.r.copy())
+    
+    g = col(J.rmatvec(-r))
+    pif('A and g updated in %.2fs' % (time.time() - tm))
+    
+    stop = norm(g, np.inf) < e_1
+    while (not stop) and (k < k_max) and (fevals < max_fevals):
+        k += 1
+        pif('beginning iteration %d' % (k,))
+        d_sd = col((sqnorm(g)) / (sqnorm (J.dot(g))) * g)
+        GNcomputed = False
+
+        while True:
+            # if the Cauchy point is outside the trust region,
+            # take that direction but only to the edge of the trust region
+            if delta is not None and norm(d_sd) >= delta:
+                pif('PROGRESS: Using stunted cauchy')
+                d_dl = np.array(col(delta/norm(d_sd) * d_sd))
+            else:
+                if not GNcomputed:
+                    tm = time.time()
+                    if g.size <= 1:
+                        print 'Need to handle this case, TODO'
+                    d_gn = col(solve(A, g))
+                    pif('sparse solve...done in %.2fs' % (time.time() - tm))
+                    GNcomputed = True
+
+                # if the gauss-newton solution is within the trust region, use it
+                if delta is None or norm(d_gn) <= delta:
+                    pif('PROGRESS: Using gauss-newton solution')
+                    d_dl = np.array(d_gn)
+                    if delta is None:
+                        delta = norm(d_gn)
+
+                else: # between cauchy step and gauss-newton step
+                    pif('PROGRESS: between cauchy and gauss-newton')
+
+                    # compute beta multiplier
+                    delta_sq = delta**2
+                    pnow = (
+                        (d_gn-d_sd).T.dot(d_gn-d_sd)*delta_sq
+                        + d_gn.T.dot(d_sd)**2
+                        - sqnorm(d_gn) * (sqnorm(d_sd)))
+                    B = delta_sq - sqnorm(d_sd)
+                    B /= ((d_gn-d_sd).T.dot(d_sd) + math.sqrt(pnow))
+
+                    # apply step
+                    d_dl = np.array(d_sd + float(B) * (d_gn - d_sd))
+
+                    #assert(math.fabs(norm(d_dl) - delta) < 1e-12)
+            if norm(d_dl) <= e_2*norm(p):
+                pif('stopping because of small step size (norm_dl < %.2e)' % (e_2*norm(p)))
+                stop = True
+            else:
+                p_new = p + d_dl
+
+                tm_residuals = time.time()
+                obj.x = p_new
+                fevals += 1
+
+                r_trial = obj.r.copy()
+                tm_residuals = time.time() - tm
+
+                # rho is the ratio of...
+                # (improvement in SSE) / (predicted improvement in SSE)  
+                
+                # slower
+                #rho = norm(e_p)**2 - norm(e_p_trial)**2
+                #rho = rho / (L(d_dl*0, e_p, J) - L(d_dl, e_p, J))              
+                
+                # faster
+                sqnorm_ep = sqnorm(r)
+                rho = sqnorm_ep - norm(r_trial)**2
+                
+                if rho > 0:
+                    rho /= predicted_improvement(d_dl, -r, J, sqnorm_ep, A, g)
+                    
+                improvement_occurred = rho > 0
+
+                # if the objective function improved, update input parameter estimate.
+                # Note that the obj.x already has the new parms,
+                # and we should not set them again to the same (or we'll bust the cache)                
+                if improvement_occurred:
+                    p = col(p_new)
+                    call_cb()
+
+                    if (sqnorm_ep - norm(r_trial)**2) / sqnorm_ep < e_3:
+                        stop = True
+                        pif('stopping because improvement < %.1e%%' % (100*e_3,))
+
+
+                else:  # Put the old parms back
+                    obj.x = ch.Ch(p)
+                    obj.on_changed('x') # copies from flat vector to free variables
+
+                # if the objective function improved and we're not done,
+                # get ready for the next iteration
+                if improvement_occurred and not stop:
+                    tm_jac = time.time()
+                    pif('computing Jacobian...')
+                    #J = obj.J
+                    
+                    J0 = obj.J
+                    J = LinearOperator(shape=J0.shape, matvec=lambda x : J0.dot(x), rmatvec=lambda x : J0.rmatvec(x) if hasattr(J0, 'rmatvec') else J0.T.dot(x), dtype=np.float64)
+                    
+                    tm_jac = time.time() - tm_jac
+                    pif('Jacobian (%dx%d) computed in %.2fs' % (J.shape[0], J.shape[1], tm_jac))
+
+                    pif('Residuals+Jac computed in %.2fs' % (tm_jac + tm_residuals,))
+
+                    tm = time.time()
+                    pif('updating A and g...')
+                    #A = J.T.dot(J)
+                    A = LinearOperator(shape=(J.shape[1], J.shape[1]), matvec=lambda x : J.rmatvec(J.matvec(x)), rmatvec=lambda x : J.rmatvec(J.matvec(x)), dtype=np.float64)
+                    r = col(r_trial)
+                    #g = col(J.T.dot(-r))
+                    g = col(J.rmatvec(-r))
                     pif('A and g updated in %.2fs' % (time.time() - tm))
                     
                     if norm(g, np.inf) < e_1:

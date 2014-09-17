@@ -569,6 +569,10 @@ class Ch(object):
             if isinstance(rhs, np.ndarray) and rhs.size==1:
                 rhs = rhs.ravel()[0]
     
+            # FIXME: cleanup
+            if isinstance(lhs, LinearOperator) or isinstance(rhs, LinearOperator):
+                return LinearOperator(shape=(lhs.shape[0], rhs.shape[1]), matvec=lambda x : lhs.dot(rhs.dot(x.ravel())), rmatvec=lambda x : lhs.rmatvec(rhs.rmatvec(x.ravel())), dtype=np.float64)
+    
             if isinstance(lhs, numbers.Number) or isinstance(rhs, numbers.Number):
                 return lhs * rhs
 

@@ -50,6 +50,7 @@ import cPickle as pickle
 import scipy.sparse as sp
 from utils import row, col
 from copy import copy as copy_copy
+from scipy.sparse.linalg import LinearOperator
 
 __all__ += ['pi', 'set_printoptions']
 pi = np.pi
@@ -543,6 +544,12 @@ class subtract(ch.Ch):
     def compute_dr_wrt(self, wrt):
         if (wrt is self.a) == (wrt is self.b):
             return None
+
+        if self.a.shape == self.b.shape:
+            if wrt is self.a:
+                return LinearOperator(shape=(self.size, wrt.size), matvec=lambda x : x.ravel(), rmatvec=lambda x : x.ravel(), dtype=np.float64)
+            elif wrt is self.b:
+                return LinearOperator(shape=(self.size, wrt.size), matvec=lambda x : -x.ravel(), rmatvec=lambda x : -x.ravel(), dtype=np.float64)
 
         m = 1. if wrt is self.a else -1.
         return _broadcast_matrix(self.a, self.b, wrt, m)
