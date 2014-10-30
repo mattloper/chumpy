@@ -364,6 +364,10 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
                             100. * J.nnz / (J.shape[0] * J.shape[1])))
 
                         d_gn = col(solve(A, g)) if g.size>1 else np.atleast_1d(g.ravel()[0]/A[0,0])
+
+                        if np.isnan(np.min(d_gn)):
+                            d_gn = g
+
                         pif('sparse solve...done in %.2fs' % (time.time() - tm))
                     else:
                         pif('dense solve...')
