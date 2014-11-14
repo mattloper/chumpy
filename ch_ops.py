@@ -8,7 +8,7 @@ See LICENCE.txt for licensing and contact information.
 
 # Numpy functions
 __all__ = ['array', 'amax','amin', 'max', 'min', 'maximum','minimum','nanmax','nanmin',
-            'sum', 'exp', 'log', 'mean',
+            'sum', 'exp', 'log', 'mean','std', 'var',
             'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
             'sqrt', 'square', 'absolute', 'abs', 'clip',
             'power',
@@ -182,7 +182,6 @@ def cross(a, b, axisa=-1, axisb=-1, axisc=-1, axis=None):
 
 
 
-
 class cumsum(ch.Ch):
     dterms = 'a'
     terms = 'axis'
@@ -343,7 +342,7 @@ class mean(ch.Ch):
             self.dr_cache = {}
 
     def compute_r(self):
-        return np.array([np.mean(self.x.r, axis=self.axis)])
+        return np.array(np.mean(self.x.r, axis=self.axis))
 
     def compute_dr_wrt(self, wrt):
         if wrt is not self.x:
@@ -363,6 +362,18 @@ class mean(ch.Ch):
                 result = sp.csc_matrix((data, (idxs_postsum.ravel(), idxs_presum.ravel())), (self.r.size, wrt.size))
                 self.dr_cache[uid] = result
             return self.dr_cache[uid]
+
+
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+    if (dtype != None or out != None or ddof != 0 or keepdims != False):
+        raise NotImplementedException('Unimplemented for non-default dtype, out, ddof, and keepdims.')
+    return mean(a**2., axis=axis)
+    
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+    if (dtype != None or out != None or ddof != 0 or keepdims != False):
+        raise NotImplementedException('Unimplemented for non-default dtype, out, ddof, and keepdims.')
+    return sqrt(var(a, axis=axis))
+    
 
 class SumOfSquares(ch.Ch):
     dterms = 'x',
