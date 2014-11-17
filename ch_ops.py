@@ -314,7 +314,7 @@ class sum(ch.Ch):
         if wrt is not self.x:
             return
         if self.axis == None:
-            return row(np.ones((1, len(self.x.r))))
+            return row(np.ones((1, len(self.x.r.ravel()))))
         else:
             uid = tuple(list(self.x.shape) + [self.axis])
             if uid not in self.dr_cache:
