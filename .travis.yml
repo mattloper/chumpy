@@ -7,4 +7,6 @@ before_install:
   - sudo cat /etc/issue.net
   - sudo apt-get update -q
   - sudo apt-get install -qq python-dev gfortran pkg-config liblapack-dev  
+install:
+  - sudo pip install -r requirements.txt
 script: make test
