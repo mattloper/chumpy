@@ -5,9 +5,6 @@ virtualenv:
   system_site_packages: true
 before_install:
   - sudo cat /etc/issue.net
-  - sudo add-apt-repository ppa:pylab/stable -y
   - sudo apt-get update -q
-  - sudo apt-get install -qq libopenblas-dev liblapack-dev gfortran # install these ones first
-  - sudo apt-get install -qq python-numpy
-  - sudo pip install scipy==0.13.0
+  - sudo apt-get install -qq python-dev gfortran pkg-config liblapack-dev  
 script: make test
