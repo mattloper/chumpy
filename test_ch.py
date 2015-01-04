@@ -215,6 +215,15 @@ class TestCh(unittest.TestCase):
         
         self.assertFalse(np.any(residuals1))
         self.assertFalse(np.any(residuals2))
+        
+        d0 = ch.array(np.arange(60).reshape((10,6)))
+        d1 = ch.vstack((d0[:4], d0[4:]))
+        d2 = ch.hstack((d1[:,:3], d1[:,3:]))
+        tmp = d2.dr_wrt(d0).todense()
+        diff = tmp - np.eye(tmp.shape[0])
+        self.assertFalse(np.any(diff.ravel()))
+        
+        
 
     #def test_drs(self):
     #    a = ch.Ch(2)

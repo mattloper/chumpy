@@ -379,7 +379,7 @@ class Concatenate(ch.Ch):
     def everything(self):
         if not hasattr(self, '_everything'):
             self._everything = np.arange(self.r.size).reshape(self.r.shape)
-            self._everything = np.rollaxis(self._everything, self.axis, 0)
+            self._everything = np.swapaxes(self._everything, self.axis, 0)
         return self._everything
     
     def compute_dr_wrt(self, wrt):
@@ -402,7 +402,7 @@ class Concatenate(ch.Ch):
             if term is wrt:
                 JS += [_JS]
                 data += [_data]
-                IS += [self.everything[offset:offset+tsz].ravel()]
+                IS += [np.swapaxes(self.everything[offset:offset+tsz], self.axis, 0).ravel()]
             offset += tsz
         IS   = np.concatenate(IS).ravel()
         JS   = np.concatenate(JS).ravel()
