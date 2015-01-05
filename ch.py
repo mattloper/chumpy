@@ -709,6 +709,13 @@ class Ch(object):
                 if indirect_dr is not None:
                     drs.append(indirect_dr)
 
+        def _matvec(x):
+            '''
+            Aggregate drs starting from empty sparse matrix.
+
+            '''
+            return reduce(lambda acc, dr: acc+dr.dot(x), drs, sp.csc_matrix((drs[0].shape[0], x.shape[1])))
+
         if len(drs)==0:
             result = None
 
@@ -719,7 +726,7 @@ class Ch(object):
             if not np.any([isinstance(a, LinearOperator) for a in drs]):
                 result = reduce(lambda x, y: x+y, drs)
             else:
-                result = LinearOperator(drs[0].shape, lambda x : reduce(lambda a, b: a.dot(x)+b.dot(x),drs))
+                result = LinearOperator(drs[0].shape, matvec=_matvec)
 
         # TODO: figure out how/whether to do this.
         # if result is not None and not sp.issparse(result):
