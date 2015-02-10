@@ -418,6 +418,7 @@ class NanDivide(divide):
         shape = result.shape
         result = result.ravel()
         result[np.isinf(result)] = 0
+        result[np.isnan(result)] = 0
         return result.reshape(shape)
         
     def compute_dr_wrt(self, wrt):

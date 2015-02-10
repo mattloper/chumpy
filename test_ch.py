@@ -55,6 +55,8 @@ class TestCh(unittest.TestCase):
         bar = ch.array(np.random.randn(16).reshape((4,4)))
         bar[2,2] = 0
         self.assertEqual(ch.NanDivide(foo,bar)[2,2].r, 0.)
+        foo[2,2] = 0
+        self.assertEqual(ch.NanDivide(foo,bar)[2,2].r, 0.)
 
     def test_casting(self):
         for fn in float, int:
