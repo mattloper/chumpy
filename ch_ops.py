@@ -46,6 +46,7 @@ __all__ += numpy_array_creation_routines
     
 import ch
 import numpy as np
+import warnings
 import cPickle as pickle
 import scipy.sparse as sp
 from utils import row, col
@@ -414,7 +415,9 @@ class NanDivide(divide):
     dterms = 'x1', 'x2'
     
     def compute_r(self):
-        result = super(self.__class__, self).compute_r()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = super(self.__class__, self).compute_r()
         shape = result.shape
         result = result.ravel()
         result[np.isinf(result)] = 0
@@ -422,7 +425,9 @@ class NanDivide(divide):
         return result.reshape(shape)
         
     def compute_dr_wrt(self, wrt):
-        result = super(self.__class__, self).compute_dr_wrt(wrt)        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = super(self.__class__, self).compute_dr_wrt(wrt)        
         if result is not None:
             result = result.copy()
             if sp.issparse(result):
