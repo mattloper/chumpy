@@ -415,9 +415,10 @@ class NanDivide(divide):
     
     def compute_r(self):
         result = super(self.__class__, self).compute_r()
-        result[result==np.inf] = 0
-        result[result==np.nan] = 0
-        return result
+        shape = result.shape
+        result = result.ravel()
+        result[np.isinf(result)] = 0
+        return result.reshape(shape)
         
     def compute_dr_wrt(self, wrt):
         result = super(self.__class__, self).compute_dr_wrt(wrt)        

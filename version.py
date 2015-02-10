@@ -1,3 +1,3 @@
-version = '0.61'
+version = '0.62'
 short_version = version
 full_version = version

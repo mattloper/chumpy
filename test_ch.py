@@ -50,6 +50,12 @@ class TestCh(unittest.TestCase):
         self.assertTrue(result.dr_wrt(bb).nnz > 0)
         self.assertTrue(result.dr_wrt(cc).nnz > 0)
 
+    def test_nandivide(self):
+        foo = ch.array(np.random.randn(16).reshape((4,4)))
+        bar = ch.array(np.random.randn(16).reshape((4,4)))
+        bar[2,2] = 0
+        self.assertEqual(ch.NanDivide(foo,bar)[2,2].r, 0.)
+
     def test_casting(self):
         for fn in float, int:
             self.assertEqual(fn(np.array(5)),     fn(ch.array(5)))
