@@ -9,5 +9,5 @@ before_install:
   - sudo apt-get install -qq python-dev gfortran pkg-config liblapack-dev  
 install:
   - pip install --upgrade pip
-  - pip install -r requirements.txt
+  - pip install -vr requirements.txt
 script: make test
