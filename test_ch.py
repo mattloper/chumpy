@@ -77,6 +77,10 @@ class TestCh(unittest.TestCase):
         cc.dr_wrt(bc)    
         #print cn
 
+    def test_make_sure_is_double(self):
+        x = ch.array([0])
+        self.assertTrue(isinstance(x.r[0], np.float64))
+
     def test_cross(self):
         aa = ch.random.randn(30).reshape((10,3))
         bb = ch.random.randn(30).reshape((10,3))
