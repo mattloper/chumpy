@@ -98,7 +98,7 @@ class Ch(object):
             for idx, a in enumerate(args):
                 kwargs[cls.term_order[idx]] = a
         elif len(args)>0:
-            kwargs['x'] = args[0]
+            kwargs['x'] = np.asarray(args[0], np.float64)
 
         defs = {p.name : deepcopy(p.default) for p in cls.parm_declarations() if p.default is not None}
         defs.update(kwargs)
