@@ -262,6 +262,7 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
     http://www.ics.forth.gr/cvrl/publications/conferences/0201-P0401-lourakis-levenberg.pdf
     """
 
+    import warnings
     if show_residuals is not None:
         import warnings
         warnings.warn('minimize_dogleg: show_residuals parm is deprecaed, pass a dict instead.')
@@ -362,8 +363,17 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
                             A.shape[0],
                             A.shape[1],
                             100. * J.nnz / (J.shape[0] * J.shape[1])))
-
-                        d_gn = col(solve(A, g)) if g.size>1 else np.atleast_1d(g.ravel()[0]/A[0,0])
+                            
+                        if g.size > 1:             
+                            with warnings.catch_warnings():
+                                warnings.filterwarnings('error')
+                                try:
+                                    d_gn = col(solve(A, g))
+                                except:
+                                    from scipy.sparse.linalg import lsqr
+                                    d_gn = col(lsqr(A, g)[0])
+                        else:
+                            d_gn = np.atleast_1d(g.ravel()[0]/A[0,0])
                         pif('sparse solve...done in %.2fs' % (time.time() - tm))
                     else:
                         pif('dense solve...')
