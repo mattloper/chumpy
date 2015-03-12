@@ -365,13 +365,10 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
                             100. * J.nnz / (J.shape[0] * J.shape[1])))
                             
                         if g.size > 1:             
-                            with warnings.catch_warnings():
-                                warnings.filterwarnings('error')
-                                try:
-                                    d_gn = col(solve(A, g))
-                                except:
-                                    from scipy.sparse.linalg import lsqr
-                                    d_gn = col(lsqr(A, g)[0])
+                            d_gn = col(solve(A, g))
+                            if np.any(np.isnan(d_gn)) or np.any(np.isinf(d_gn)):
+                                from scipy.sparse.linalg import lsqr
+                                d_gn = col(lsqr(A, g)[0])
                         else:
                             d_gn = np.atleast_1d(g.ravel()[0]/A[0,0])
                         pif('sparse solve...done in %.2fs' % (time.time() - tm))
