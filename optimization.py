@@ -431,8 +431,10 @@ def _minimize_dogleg(obj, free_variables, on_step=None,
                 sqnorm_ep = sqnorm(r)
                 rho = sqnorm_ep - norm(r_trial)**2
                 
-                if rho > 0:
-                    rho /= predicted_improvement(d_dl, -r, J, sqnorm_ep, A, g)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore',category=RuntimeWarning)
+                    if rho > 0:
+                        rho /= predicted_improvement(d_dl, -r, J, sqnorm_ep, A, g)
                     
                 improvement_occurred = rho > 0
 
