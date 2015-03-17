@@ -238,9 +238,14 @@ class square(UnaryElemwise):
     _r = np.square
     _d = lambda self, x : x * 2.
 
+def my_power(a, b):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore",category=RuntimeWarning)
+        return np.nan_to_num(np.power(a, b))
+
 class sqrt(UnaryElemwise):
     _r = np.sqrt
-    _d = lambda self, x : .5 * np.power(x, -0.5)
+    _d = lambda self, x : .5 * my_power(x, -0.5)
 
 class exp(UnaryElemwise):
     _r = np.exp
