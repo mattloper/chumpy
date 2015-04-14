@@ -7,7 +7,7 @@ See LICENCE.txt for licensing and contact information.
 """
 
 
-__all__ = ['Ch', 'depends_on']
+__all__ = ['Ch', 'depends_on', 'MatVecMult', 'ChHandle', 'ChLambda']
 
 import sys
 import inspect
