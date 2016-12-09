@@ -6,6 +6,7 @@ Author(s): Matthew Loper
 See LICENCE.txt for licensing and contact information.
 """
 
+from __future__ import print_function
 import unittest
 import numpy as np
 
@@ -13,14 +14,14 @@ import numpy as np
 has_ressources = True
 try:
   import resource
-  
-  def abstract_ressource_timer(): 
+
+  def abstract_ressource_timer():
     return resource.getrusage(resource.RUSAGE_SELF)
   def abstract_ressource_counter(r1, r2):
     _r1 = r1.ru_stime + r1.ru_utime
     _r2 = r2.ru_stime + r2.ru_utime
-    
-    return _r2 - _r1 
+
+    return _r2 - _r1
 except ImportError:
   has_ressources = False
   pass
@@ -29,25 +30,25 @@ except ImportError:
 if not has_ressources:
   try:
     from ctypes import *
-    
-    
-    
+
+
+
     def abstract_ressource_timer():
-      val = c_int64() 
+      val = c_int64()
       windll.Kernel32.QueryPerformanceCounter(byref(val))
       return val
     def abstract_ressource_counter(r1, r2):
       """Returns the elapsed time between r2 and r1 (r2 > r1) in milliseconds"""
-      val = c_int64() 
+      val = c_int64()
       windll.Kernel32.QueryPerformanceFrequency(byref(val))
-      
+
       return (1000*float(r2.value-r1.value))/val.value
 
   except ImportError:
     has_win32api = False
 
 
-  
+
 
 import ch
 
@@ -74,7 +75,7 @@ def timer(setup, go, n):
     for i in range(n):
         if setup is not None:
             setup()
-            
+
         tm0 = abstract_ressource_timer()
 
         # if False:
@@ -86,7 +87,7 @@ def timer(setup, go, n):
         tm1 = abstract_ressource_timer()
 
         tms.append(abstract_ressource_counter(tm0, tm1))
-    
+
     #raw_input(tms)
     return np.mean(tms) # see docs for timeit, which recommend getting minimum
 
@@ -136,7 +137,7 @@ class TestPerformance(unittest.TestCase):
         self.assertLess(ratios['multiply'], 8+tol)
         self.assertLess(ratios['divide'], 4+tol)
         self.assertLess(ratios['power'], 2+tol)
-        #print ratios
+        #print(ratios)
 
 
     def test_svd(self):
@@ -168,15 +169,15 @@ class TestPerformance(unittest.TestCase):
         npt = timer(setup = None, go = go, n = 20)
 
         # Compare
-        #print cht_r / npt
-        #print cht_dr / npt
+        #print(cht_r / npt)
+        #print(cht_dr / npt)
         self.assertLess(cht_r / npt, 3.3)
         self.assertLess(cht_dr / npt, 2700)
 
 
 
-    
-    
+
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestPerformance)
     unittest.TextTestRunner(verbosity=2).run(suite)

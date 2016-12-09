@@ -4,6 +4,7 @@ Author(s): Matthew Loper
 See LICENCE.txt for licensing and contact information.
 """
 
+from __future__ import print_function
 
 import ch
 import numpy as np
@@ -11,7 +12,11 @@ from os.path import join, split
 from StringIO import StringIO
 import numpy
 import chumpy
-import cPickle as pickle
+from platform import python_version
+if python_version()[0] =='2':
+    import cPickle as pickle
+else:
+    import _pickle as pickle
 
 src = ''
 num_passed = 0
@@ -21,12 +26,12 @@ which_passed = []
 def r(fn_name, args_req, args_opt, nplib=numpy, chlib=chumpy):
     global num_passed, num_not_passed
     result = [None, None]
-        
+
     for lib in [nplib, chlib]:
 
         # if fn_name is 'svd' and lib is chlib:
         #     import pdb; pdb.set_trace()
-        if lib is nplib:            
+        if lib is nplib:
             fn = getattr(lib, fn_name)
         else:
             try:
@@ -46,11 +51,11 @@ def r(fn_name, args_req, args_opt, nplib=numpy, chlib=chumpy):
                 num_passed += 1
                 global which_passed
                 which_passed.append(fn_name)
-                
+
                 if hasattr(_, 'dterms'):
                     try:
                         _.r
-                    
+
                         try:
                             pickle.dumps(_)
                         except:
@@ -68,7 +73,7 @@ def r(fn_name, args_req, args_opt, nplib=numpy, chlib=chumpy):
                 # if fn_name == 'rot90':
                 #     import pdb; pdb.set_trace()
             result[0] = e.__class__.__name__
-            
+
         try:
             if isinstance(args_req, dict):
                 fn(**dict(args_req.items() + args_opt.items()))
@@ -80,15 +85,15 @@ def r(fn_name, args_req, args_opt, nplib=numpy, chlib=chumpy):
             if e is TypeError:
                 import pdb; pdb.set_trace()
             result[1] = e.__class__.__name__
-            
-    # print '%s: %s, %s' % (fn_name, result[0], result[1])
-    
+
+    # print('%s: %s, %s' % (fn_name, result[0], result[1]))
+
     append(fn_name, result[0], result[1])
-    
+
 def make_row(a, b, c, b_color, c_color):
     global src
     src += '<tr><td>%s</td><td style="background-color:%s">%s</td><td style="background-color:%s">%s</td></tr>' % (a,b_color, b,c_color, c)
-    
+
 def append(a, b, c):
     global src
     b_color = 'white'
@@ -104,11 +109,11 @@ def append(a, b, c):
         'untested': 'lightyellow',
         'not yet implemented': 'pink'
     }
-    
+
     b_color = lookup[b] if b in lookup else 'white'
     c_color = lookup[c] if c in lookup else 'white'
 
-    print '%s: %s, %s' % (a,b,c)
+    print('%s: %s, %s' % (a,b,c))
     make_row(a, b, c, b_color, c_color)
 
 def m(s):
@@ -124,14 +129,14 @@ def hd2(s):
     global src
     src += '</table><br/><br/><table border=1>'
     src += '<tr><td colspan=3 style="background-color:black;color:white"><h2 style="margin-bottom:0;">%s</h2></td></tr>' % (s,)
-    
+
 def main():
-    
+
     #sample_array
-    
+
     ###############################
     hd2('Array Creation Routines')
-    
+
     hd3('Ones and zeros')
 
     r('empty', {'shape': (2,4,2)}, {'dtype': np.uint8, 'order': 'C'})
@@ -142,7 +147,7 @@ def main():
     r('ones_like', {'a': np.empty((2,4,2))}, {'dtype': np.float64, 'order': 'C'})
     r('zeros', {'shape': (2,4,2)}, {'dtype': np.uint8, 'order': 'C'})
     r('zeros_like', {'a': np.empty((2,4,2))}, {'dtype': np.float64, 'order': 'C'})
-    
+
     hd3('From existing data')
     r('array', {'object': [1,2,3]}, {'dtype': np.float64, 'order': 'C', 'subok': False, 'ndmin': 2})
     r('asarray', {'a': np.array([1,2,3])}, {'dtype': np.float64, 'order': 'C'})
@@ -169,7 +174,7 @@ def main():
     r('meshgrid', ([1,2,3], [4,5,6]), {})
     m('mgrid')
     m('ogrid')
-    
+
     hd3('Building matrices')
     r('diag', {'v': np.arange(9).reshape((3,3))}, {'k': 0})
     r('diagflat', {'v': [[1,2], [3,4]]}, {})
@@ -177,24 +182,24 @@ def main():
     r('tril', {'m': [[1,2,3],[4,5,6],[7,8,9],[10,11,12]]}, {'k': -1})
     r('triu', {'m': [[1,2,3],[4,5,6],[7,8,9],[10,11,12]]}, {'k': -1})
     r('vander', {'x': np.array([1, 2, 3, 5])}, {'N': 3})
-    
+
     ###############################
     hd2('Array manipulation routines')
-    
+
     hd3('Basic operations')
     r('copyto', {'dst': np.eye(3), 'src': np.eye(3)}, {})
-    
+
     hd3('Changing array shape')
     r('reshape', {'a': np.eye(3), 'newshape': (9,)}, {'order' : 'C'})
     r('ravel', {'a': np.eye(3)}, {'order' : 'C'})
     m('flat')
     m('flatten')
-    
+
     hd3('Transpose-like operations')
     r('rollaxis', {'a': np.ones((3,4,5,6)), 'axis': 3}, {'start': 0})
     r('swapaxes', {'a': np.array([[1,2,3]]), 'axis1': 0, 'axis2': 1}, {})
     r('transpose', {'a': np.arange(4).reshape((2,2))}, {'axes': (1,0)})
-    
+
     hd3('Changing number of dimensions')
     r('atleast_1d', (np.eye(3),), {})
     r('atleast_2d', (np.eye(3),), {})
@@ -203,7 +208,7 @@ def main():
     m('broadcast_arrays')
     r('expand_dims', (np.array([1,2]),2), {})
     r('squeeze', {'a': (np.array([[[1,2,3]]]))}, {})
-    
+
     hd3('Changing kind of array')
     r('asarray', {'a': np.array([1,2,3])}, {'dtype': np.float64, 'order': 'C'})
     r('asanyarray', {'a': np.array([1,2,3])}, {'dtype': np.float64, 'order': 'C'})
@@ -212,7 +217,7 @@ def main():
     r('asfortranarray', {'a': np.array([1,2,3])}, {})
     r('asscalar', {'a': np.array([24])}, {})
     r('require', {'a': np.array([24])}, {})
-    
+
     hd3('Joining arrays')
     m('column_stack')
     r('concatenate', ((np.eye(3), np.eye(3)),1), {})
@@ -238,19 +243,19 @@ def main():
     m('resize')
     m('trim_zeros')
     m('unique')
-    
+
     hd3('Rearranging elements')
     r('fliplr', (np.eye(3),), {})
     r('flipud', (np.eye(3),), {})
     r('reshape', {'a': np.eye(3), 'newshape': (9,)}, {'order' : 'C'})
     r('roll', (np.arange(10), 2), {})
     r('rot90', (np.arange(4).reshape((2,2)),), {})
-        
+
     ###############################
     hd2('Linear algebra (numpy.linalg)')
-    
+
     extra_args = {'nplib': numpy.linalg, 'chlib': ch.linalg}
-    
+
     hd3('Matrix and dot products')
     r('dot', {'a': np.eye(3), 'b': np.eye(3)}, {})
     r('dot', {'a': np.eye(3).ravel(), 'b': np.eye(3).ravel()}, {})
@@ -261,25 +266,25 @@ def main():
     m('einsum')
     r('matrix_power', {'M': np.eye(3), 'n': 2}, {}, **extra_args)
     r('kron', {'a': np.eye(3), 'b': np.eye(3)}, {})
-        
+
     hd3('Decompositions')
     r('cholesky', {'a': np.eye(3)}, {}, **extra_args)
     r('qr', {'a': np.eye(3)}, {}, **extra_args)
     r('svd', (np.eye(3),), {}, **extra_args)
-    
+
     hd3('Matrix eigenvalues')
     r('eig', (np.eye(3),), {}, **extra_args)
     r('eigh', (np.eye(3),), {}, **extra_args)
     r('eigvals', (np.eye(3),), {}, **extra_args)
     r('eigvalsh', (np.eye(3),), {}, **extra_args)
-    
+
     hd3('Norms and other numbers')
     r('norm', (np.eye(3),), {}, **extra_args)
     r('cond', (np.eye(3),), {}, **extra_args)
     r('det', (np.eye(3),), {}, **extra_args)
     r('slogdet', (np.eye(3),), {}, **extra_args)
     r('trace', (np.eye(3),), {})
-    
+
     hd3('Solving equations and inverting matrices')
     r('solve', (np.eye(3),np.ones(3)), {}, **extra_args)
     r('tensorsolve', (np.eye(3),np.ones(3)), {}, **extra_args)
@@ -287,7 +292,7 @@ def main():
     r('inv', (np.eye(3),), {}, **extra_args)
     r('pinv', (np.eye(3),), {}, **extra_args)
     r('tensorinv', (np.eye(4*6).reshape((4,6,8,3)),), {'ind': 2}, **extra_args)
-    
+
     hd2('Mathematical functions')
 
     hd3('Trigonometric functions')
@@ -305,7 +310,7 @@ def main():
     r('unwrap', (np.arange(3),), {})
     r('deg2rad', (np.arange(3),), {})
     r('rad2deg', (np.arange(3),), {})
-    
+
     hd3('Hyperbolic functions')
     r('sinh', (np.arange(3),), {})
     r('cosh', (np.arange(3),), {})
@@ -313,7 +318,7 @@ def main():
     r('arcsinh', (np.arange(3)/9.,), {})
     r('arccosh', (-np.arange(3)/9.,), {})
     r('arctanh', (np.arange(3)/9.,), {})
-    
+
     hd3('Rounding')
     r('around', (np.arange(3),), {})
     r('round_', (np.arange(3),), {})
@@ -322,7 +327,7 @@ def main():
     r('floor', (np.arange(3),), {})
     r('ceil', (np.arange(3),), {})
     r('trunc', (np.arange(3),), {})
-    
+
     hd3('Sums, products, differences')
     r('prod', (np.arange(3),), {})
     r('sum', (np.arange(3),), {})
@@ -334,7 +339,7 @@ def main():
     r('gradient', (np.arange(3),), {})
     r('cross', (np.arange(3), np.arange(3)), {})
     r('trapz', (np.arange(3),), {})
-    
+
     hd3('Exponents and logarithms')
     r('exp', (np.arange(3),), {})
     r('expm1', (np.arange(3),), {})
@@ -345,17 +350,17 @@ def main():
     r('log1p', (np.arange(3),), {})
     r('logaddexp', (np.arange(3), np.arange(3)), {})
     r('logaddexp2', (np.arange(3), np.arange(3)), {})
-    
+
     hd3('Other special functions')
     r('i0', (np.arange(3),), {})
     r('sinc', (np.arange(3),), {})
-    
+
     hd3('Floating point routines')
     r('signbit', (np.arange(3),), {})
     r('copysign', (np.arange(3), np.arange(3)), {})
     r('frexp', (np.arange(3),), {})
     r('ldexp', (np.arange(3), np.arange(3)), {})
-    
+
     hd3('Arithmetic operations')
     r('add', (np.arange(3), np.arange(3)), {})
     r('reciprocal', (np.arange(3),), {})
@@ -370,13 +375,13 @@ def main():
     r('mod', (np.arange(3), np.arange(3)), {})
     r('modf', (np.arange(3),), {})
     r('remainder', (np.arange(3), np.arange(3)), {})
-    
+
     hd3('Handling complex numbers')
     m('angle')
     m('real')
     m('imag')
     m('conj')
-    
+
     hd3('Miscellaneous')
     r('convolve', (np.arange(3), np.arange(3)), {})
     r('clip', (np.arange(3), 0, 2), {})
@@ -392,9 +397,9 @@ def main():
     r('nan_to_num', (np.arange(3),), {})
     r('real_if_close', (np.arange(3),), {})
     r('interp', (2.5, [1,2,3], [3,2,0]), {})
-    
+
     extra_args = {'nplib': numpy.random, 'chlib': ch.random}
-    
+
     hd2('Random sampling (numpy.random)')
     hd3('Simple random data')
     r('rand', (3,), {}, **extra_args)
@@ -407,11 +412,11 @@ def main():
     r('sample', (3,), {}, **extra_args)
     r('choice', (np.ones(3),), {}, **extra_args)
     r('bytes', (3,), {}, **extra_args)
-    
+
     hd3('Permutations')
     r('shuffle', (np.ones(3),), {}, **extra_args)
     r('permutation', (3,), {}, **extra_args)
-    
+
     hd3('Distributions (these all pass)')
     r('beta', (.5, .5), {}, **extra_args)
     r('binomial', (.5, .5), {}, **extra_args)
@@ -421,13 +426,13 @@ def main():
     r('f', [1,48,1000], {}, **extra_args)
     r('gamma', [.5], {}, **extra_args)
     make_row('...AND 28 OTHERS...', 'passed', 'passed', 'lightgreen', 'lightgreen')
-    
-    
+
+
     hd3('Random generator')
     r('seed', [], {}, **extra_args)
     r('get_state', [], {}, **extra_args)
     r('set_state', [np.random.get_state()], {}, **extra_args)
-    
+
     ####################################
     hd2('Statistics')
     hd3('Order statistics')
@@ -447,23 +452,23 @@ def main():
     r('nanmean', (np.eye(3),),{})
     r('nanstd', (np.eye(3),),{})
     r('nanvar', (np.eye(3),),{})
-    
+
 
     hd3('Correlating')
     r('corrcoef', (np.eye(3),),{})
     r('correlate', ([1, 2, 3], [0, 1, 0.5]),{})
     r('cov', (np.eye(3),),{})
-    
+
     hd3('Histograms')
     r('histogram', (np.eye(3),),{})
     r('histogram2d', (np.eye(3).ravel(),np.eye(3).ravel()),{})
     r('histogramdd', (np.eye(3).ravel(),),{})
     r('bincount', (np.asarray(np.eye(3).ravel(), np.uint32),),{})
     r('digitize', (np.array([0.2, 6.4, 3.0, 1.6]), np.array([0.0, 1.0, 2.5, 4.0, 10.0])),{})
-    
+
     ####################################
     hd2('Sorting, searching, and counting')
-    
+
     hd3('Sorting')
     r('sort', (np.array([1,3,1,2.]),), {})
     m('lexsort')
@@ -472,7 +477,7 @@ def main():
     m('sort_complex')
     m('partition')
     m('argpartition')
-    
+
 # sort(a[, axis, kind, order])    Return a sorted copy of an array.
 # lexsort(keys[, axis])    Perform an indirect sort using a sequence of keys.
 # argsort(a[, axis, kind, order])    Returns the indices that would sort an array.
@@ -481,7 +486,7 @@ def main():
 # sort_complex(a)    Sort a complex array using the real part first, then the imaginary part.
 # partition(a, kth[, axis, kind, order])    Return a partitioned copy of an array.
 # argpartition(a, kth[, axis, kind, order])    Perform an indirect partition along the given axis using the algorithm specified by the kind keyword.
-    
+
     a5 = np.arange(5)
 
     hd3('Searching')
@@ -505,30 +510,30 @@ def main():
 # flatnonzero(a)    Return indices that are non-zero in the flattened version of a.
 # where(condition, [x, y])    Return elements, either from x or y, depending on condition.
 # searchsorted(a, v[, side, sorter])    Find indices where elements should be inserted to maintain order.
-# extract(condition, arr)    Return the elements of an array that satisfy some condition.    
-    
+# extract(condition, arr)    Return the elements of an array that satisfy some condition.
+
     hd3('Counting')
     r('count_nonzero', (a5,), {})
     #count_nonzero(a)	Counts the number of non-zero values in the array a.
-    
-    
+
+
 
 # histogram(a[, bins, range, normed, weights, ...])    Compute the histogram of a set of data.
 # histogram2d(x, y[, bins, range, normed, weights])    Compute the bi-dimensional histogram of two data samples.
 # histogramdd(sample[, bins, range, normed, ...])    Compute the multidimensional histogram of some data.
 # bincount(x[, weights, minlength])    Count number of occurrences of each value in array of non-negative ints.
-# digitize(x, bins[, right])    Return the indices of the bins to which each value in input array belongs.    
+# digitize(x, bins[, right])    Return the indices of the bins to which each value in input array belongs.
 
-        
+
     global src
-    src = '<html><body><table border=1>' + src + '</table></body></html>'    
+    src = '<html><body><table border=1>' + src + '</table></body></html>'
     open(join(split(__file__)[0], 'api_compatibility.html'), 'w').write(src)
-    
-    print 'passed %d, not passed %d' % (num_passed, num_not_passed)
-    
+
+    print('passed %d, not passed %d' % (num_passed, num_not_passed))
+
 
 
 if __name__ == '__main__':
     global which_passed
     main()
-    print ' '.join(which_passed)
+    print(' '.join(which_passed))
