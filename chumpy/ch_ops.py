@@ -19,7 +19,7 @@ __all__ = ['array', 'amax','amin', 'max', 'min', 'maximum','minimum','nanmax','n
             'greater', 'greater_equal', 'less', 'less_equal', 'equal', 'not_equal',
             'nonzero', 'ascontiguousarray', 'asfarray', 'arange', 'asarray', 'copy',
             'cross',
-            'shape', 'tensordot', 'sign']
+            'shape', 'sign']
 
 
 __all__ += ['SumOfSquares',
@@ -361,7 +361,7 @@ class mean(ch.Ch):
                 idxs_presum = np.arange(self.x.size).reshape(self.x.shape)
                 idxs_presum = np.rollaxis(idxs_presum, self.axis, 0)
                 idxs_postsum = np.arange(self.r.size).reshape(self.r.shape)
-                tp = np.ones(idxs_presum.ndim)
+                tp = np.ones(idxs_presum.ndim, dtype=np.uint32)
                 tp[0] = idxs_presum.shape[0]
                 idxs_postsum = np.tile(idxs_postsum, tp)
                 data = np.ones(idxs_postsum.size) / self.x.shape[self.axis]
@@ -519,7 +519,7 @@ def broadcast_shape(a_shape, b_shape):
             #print 'aaa' + str(our_result)
             #print 'bbb' + str(numpy_result)
             if not np.array_equal(our_result, numpy_result):
-                import pdb; pdb.set_trace()
+                raise Exception('numpy result not equal to our result')
             assert(np.array_equal(our_result, numpy_result))
 
         broadcast_shape_cache[uid] = tuple(our_result)
@@ -726,10 +726,7 @@ class dot(ch.Ch):
     dterms = 'a', 'b'
 
     def compute_r(self):
-        try:
-            return self.a.r.dot(self.b.r)
-        except:
-            import pdb; pdb.set_trace()
+        return self.a.r.dot(self.b.r)
     
     def compute_d1(self):
         # To stay consistent with numpy, we must upgrade 1D arrays to 2D
@@ -796,12 +793,14 @@ def nonzero(a):
         a = a.r
     return np.nonzero(a)
 
+# Try to pull the code for tensordot in from numpy and reinterpret it using chumpy ops
 try:
     import inspect
     exec(''.join(inspect.getsourcelines(np.tensordot)[0]))
-except: pass
+    __all__ += ['tensordot']
+except:
+    pass
 
-    
 
 
 def main():

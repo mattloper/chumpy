@@ -1,5 +1,5 @@
 global-include . *.py *.c *.h Makefile *.pyx 
-global-exclude optional_test_performance.py
+global-exclude chumpy/optional_test_performance.py
 prune dist
 
 

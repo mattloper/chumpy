@@ -123,13 +123,13 @@ class TestOptimization(unittest.TestCase):
 
     def test_dogleg_rosen(self):
         obj, freevars = Rosen()
-        minimize(fun=obj, x0=freevars, method='dogleg', options={'maxiter': 337})
+        minimize(fun=obj, x0=freevars, method='dogleg', options={'maxiter': 337, 'disp': False})
         self.assertTrue(freevars[0].r[0]==1.)
         self.assertTrue(freevars[1].r[0]==1.)
 
     def test_dogleg_madsen(self):
         obj = Madsen(x = Ch(np.array((3.,1.))))
-        minimize(fun=obj, x0=[obj.x], method='dogleg', options={'maxiter': 34})
+        minimize(fun=obj, x0=[obj.x], method='dogleg', options={'maxiter': 34, 'disp': False})
         self.assertTrue(np.sum(obj.r**2)/2 < 0.386599528247)
         
     @unittest.skip('negative sign in exponent screws with reverse mode')
@@ -161,12 +161,33 @@ class TestOptimization(unittest.TestCase):
         #tm = time.time()
         x1 = scipy.optimize.fmin_bfgs(errfunc, x0, fprime=gradfunc, maxiter=8, disp=0)
         #print 'forward: took %.es' % (time.time() - tm,)
-        self.assertTrue(obj.r/2. < 0.386599528247)
+        self.assertLess(obj.r/2., 0.4)
 
         # Optimize with chumpy's minimize (which uses scipy's bfgs).
         obj.x = x0
-        minimize(fun=obj, x0=[obj.x], method='bfgs', options={'maxiter': 8})
-        self.assertTrue(obj.r/2. < 0.386599528247)
+        minimize(fun=obj, x0=[obj.x], method='bfgs', options={'maxiter': 8, 'disp': False})
+        self.assertLess(obj.r/2., 0.4)
+
+    def test_nested_select(self):
+        def beales(x, y):
+            e1 = 1.5 - x + x*y
+            e2 = 2.25 - x  + x*(y**2)
+            e3 = 2.625 - x + x*(y**3)
+            return {'e1': e1, 'e2': e2, 'e3': e3}
+
+        x1 = ch.zeros(10)
+        y1 = ch.zeros(10)
+
+        # With a single select this worked
+        minimize(beales(x1, y1), x0=[x1[1:4], y1], method='dogleg', options={'disp': False})
+
+        x2 = ch.zeros(10)
+        y2 = ch.zeros(10)
+
+        # But this used to raise `AttributeError: 'Select' object has no attribute 'x'`
+        minimize(beales(x2, y2), x0=[x2[1:8][:3], y2], method='dogleg', options={'disp': False})
+        np.testing.assert_array_equal(x1, x2)
+        np.testing.assert_array_equal(y1, y2)
 
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestOptimization)

@@ -5,19 +5,21 @@ See LICENCE.txt for licensing and contact information.
 """
 
 from distutils.core import setup
-from version import version
+import importlib
+from pip.req import parse_requirements
+
+install_reqs = parse_requirements('requirements.txt', session=False)
+install_requires = [str(ir.req) for ir in install_reqs]
 
 setup(name='chumpy',
-    version=version,
-    #py_modules=['ch', 'ch_ops', 'linalg', 'utils', 'api_compatibility', 'ch_random', 'test_ch', 'test_inner_composition', 'test_linalg'],
+    version=importlib.import_module('chumpy').__version__,
     packages = ['chumpy'],
-    package_dir = {'chumpy': '.'},
     author='Matthew Loper',
     author_email='matt.loper@gmail.com',
-    url='https://github.com/mattloper/chumpy',
+    url='https://github.com/bodylabs/chumpy',
     description='chumpy',
     license='MIT',
-    install_requires=['numpy >= 1.8.1', 'scipy >= 0.13.0'],
+    install_requires=install_requires,
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

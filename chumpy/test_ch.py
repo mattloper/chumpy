@@ -123,8 +123,8 @@ class TestCh(unittest.TestCase):
         
 
     def test_sum_mean_std_var(self):
-        for fn in [ch.sum, ch.mean,ch.var, ch.std]:
-            
+        for fn in [ch.sum, ch.mean, ch.var, ch.std]:
+
             # Create fake input and differences in input space
             data1 = ch.ones((3,4,7,2))
             data2 = ch.array(data1.r + .1 * np.random.rand(data1.size).reshape(data1.shape))
@@ -137,20 +137,20 @@ class TestCh(unittest.TestCase):
             # Empirical and predicted derivatives
             gt = result2.r - result1.r
             pred = result1.dr_wrt(data1).dot(diff.ravel()).reshape(gt.shape)
-            
+
             #print np.max(np.abs(gt - pred))
-            
+
             if fn in [ch.std, ch.var]:
-                self.assertTrue(1e-2 > np.max(np.abs(gt - pred)))        
+                self.assertTrue(1e-2 > np.max(np.abs(gt - pred)))
             else:
-                self.assertTrue(1e-14 > np.max(np.abs(gt - pred)))        
+                self.assertTrue(1e-14 > np.max(np.abs(gt - pred)))
                 # test caching
                 dr0 = result1.dr_wrt(data1)
                 data1[:] = np.random.randn(data1.size).reshape(data1.shape)
                 self.assertTrue(result1.dr_wrt(data1) is dr0) # changing values shouldn't force recompute
                 result1.axis=1
                 self.assertTrue(result1.dr_wrt(data1) is not dr0)
-            
+
         self.assertEqual(ch.mean(ch.eye(3),axis=1).ndim, np.mean(np.eye(3),axis=1).ndim)
         self.assertEqual(ch.mean(ch.eye(3),axis=0).ndim, np.mean(np.eye(3),axis=0).ndim)
         self.assertEqual(ch.sum(ch.eye(3),axis=1).ndim, np.sum(np.eye(3),axis=1).ndim)
