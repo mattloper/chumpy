@@ -11,7 +11,7 @@ tidy:
 
 test:  clean qtest
 qtest:   all
-	python -m unittest discover
+	python -m unittest discover -s chumpy
 
 coverage: clean qcov
 qcov: all

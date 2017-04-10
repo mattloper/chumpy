@@ -9,7 +9,7 @@ See LICENCE.txt for licensing and contact information.
 
 __all__ = ['Ch', 'depends_on', 'MatVecMult', 'ChHandle', 'ChLambda']
 
-import sys
+import os, sys, time
 import inspect
 import scipy.sparse as sp
 import numpy as np
@@ -18,10 +18,21 @@ import weakref
 import copy as external_copy
 from functools import wraps
 from scipy.sparse.linalg.interface import LinearOperator
+import utils
 from utils import row, col
 import collections
 from copy import deepcopy
+from utils import timer
 
+
+# Turn this on if you want the profiler injected
+DEBUG = False
+# Turn this on to make optimizations very chatty for debugging
+VERBOSE = False
+def pif(msg):
+    # print-if-verbose.
+    if DEBUG or VERBOSE:
+        sys.stdout.write(msg + '\n')
 
 _props_for_dict = weakref.WeakKeyDictionary()
 def _props_for(cls):
@@ -61,9 +72,13 @@ class Ch(object):
     terms = []
     dterms = ['x']
     __array_priority__ = 2.0
-
     _cached_parms = {}
     _setup_terms = {}
+    _default_kwargs = {'make_dense' : False, 'make_sparse' : False}
+    _status = "undefined"
+    
+    called_dr_wrt = False
+    profiler = None
 
     ########################################################
     # Construction
@@ -82,6 +97,15 @@ class Ch(object):
         object.__setattr__(result, '_itr', None)
         object.__setattr__(result, '_parents', weakref.WeakKeyDictionary())
         object.__setattr__(result, '_cache', {'r': None, 'drs': weakref.WeakKeyDictionary()})
+
+        if DEBUG:
+            object.__setattr__(result, '_cache_info', {})
+            object.__setattr__(result, '_status', 'new')
+        
+        for name, default_val in cls._default_kwargs.items():
+            object.__setattr__(result, '_%s' % name, kwargs.get(name, default_val))
+            if name in kwargs:
+                del kwargs[name]
         
         # Set up storage that allows @depends_on to work
         #props = [p for p in inspect.getmembers(cls, lambda x : isinstance(x, property)) if hasattr(p[1].fget, 'deps')]
@@ -152,6 +176,10 @@ class Ch(object):
 
     ########################################################
     # Identifiers
+
+    @property
+    def short_name(self):
+        return self.label if hasattr(self, 'label') else self.__class__.__name__
 
     @property
     def sid(self):
@@ -278,11 +306,8 @@ class Ch(object):
                 return None
         
             wrt._call_on_changed()
-        
-            try:
-                jac = wrt.compute_dr_wrt(inner).T
-            except Exception as e:
-                import pdb; pdb.set_trace()
+
+            jac = wrt.compute_dr_wrt(inner).T
 
             return self._superdot(result, jac)
 
@@ -408,8 +433,24 @@ class Ch(object):
                     todo.append(parent)
                 done.add(id(next))
         return nodes_visited
-            
-        
+
+
+    def clear_cache_wrt(self, wrt, itr=None):
+        if self._cache['drs'].has_key(wrt):
+            self._cache['drs'][wrt] = None
+
+        if hasattr(self, 'dr_cached') and wrt in self.dr_cached:
+            self.dr_cached[wrt] = None
+
+        if itr is None or itr != self._itr:
+            for parent, parent_dict in self._parents.items():
+                if wrt in parent._cache['drs'] or (hasattr(parent, 'dr_cached') and wrt in parent.dr_cached):
+                    parent.clear_cache_wrt(wrt=wrt, itr=itr)
+                object.__setattr__(parent, '_dirty_vars', parent._dirty_vars.union(parent_dict['varnames']))
+                parent._invalidate_cacheprop_names(parent_dict['varnames'])
+
+        object.__setattr__(self, '_itr', itr)
+
     def replace(self, old, new):
         if (hasattr(old, 'dterms') != hasattr(new, 'dterms')):
             raise Exception('Either "old" and "new" must both be "Ch", or they must both be neither.')
@@ -541,6 +582,9 @@ class Ch(object):
         if hasattr(self, 'is_valid'):
             validity, msg = self.is_valid()
             assert validity, msg
+        if hasattr(self, '_status'):
+            self._status = 'new'
+
         if len(self._dirty_vars) > 0:
             self.on_changed(self._dirty_vars)
             object.__setattr__(self, '_dirty_vars', set())
@@ -555,8 +599,8 @@ class Ch(object):
         
         return self._cache['rview']
 
+    def _superdot(self, lhs, rhs, profiler=None):
 
-    def _superdot(self, lhs, rhs):
         try:
             if lhs is None:
                 return None
@@ -579,17 +623,26 @@ class Ch(object):
                 if sp.issparse(rhs):
                     return LinearOperator((lhs.shape[0], rhs.shape[1]), lambda x : lhs.dot(rhs.dot(x)))
                 else:
+                    # TODO: ?????????????
+                    # return lhs.matmat(rhs)
                     return lhs.dot(rhs)
             
             # TODO: Figure out how/whether to do this.
-            #lhs, rhs = utils.convert_inputs_to_sparse_if_possible(lhs, rhs)
+            tm_maybe_sparse = timer()
+            lhs, rhs = utils.convert_inputs_to_sparse_if_necessary(lhs, rhs)
+            if tm_maybe_sparse() > 0.1:
+                pif('convert_inputs_to_sparse_if_necessary in {}sec'.format(tm_maybe_sparse()))
 
             if not sp.issparse(lhs) and sp.issparse(rhs):
                 return rhs.T.dot(lhs.T).T
-    
             return lhs.dot(rhs)
-        except:
-            import pdb; pdb.set_trace()
+        except Exception as e:
+            import sys, traceback
+            traceback.print_exc(file=sys.stdout)
+            if DEBUG:
+                import pdb; pdb.post_mortem()
+            else:
+                raise
             
     def lmult_wrt(self, lhs, wrt):
         if lhs is None:
@@ -610,7 +663,7 @@ class Ch(object):
             if hasattr(p, 'dterms') and p is not wrt and p.is_dr_wrt(wrt):
                 if not isinstance(p, Ch):
                     print 'BROKEN!'
-                    import pdb; pdb.set_trace()
+                    raise Exception('Broken Should be Ch object')
 
                 indirect_dr = p.lmult_wrt(self._superdot(lhs, self._compute_dr_wrt_sliced(p)), wrt)
                 if indirect_dr is not None:
@@ -673,21 +726,32 @@ class Ch(object):
         
         return self._superdot(dr, rhs)
 
-    def dr_wrt(self, wrt, reverse_mode=False):
+    def dr_wrt(self, wrt, reverse_mode=False, profiler=None):
+        tm_dr_wrt = timer()
+        self.called_dr_wrt = True
         self._call_on_changed()
 
-        drs = []        
+        drs = []
 
         if wrt in self._cache['drs']:
+            if DEBUG:
+                if wrt not in self._cache_info:
+                    self._cache_info[wrt] = 0
+                self._cache_info[wrt] +=1
+                self._status = 'cached'
             return self._cache['drs'][wrt]
 
         direct_dr = self._compute_dr_wrt_sliced(wrt)
 
         if direct_dr is not None:
-            drs.append(direct_dr)                
+            drs.append(direct_dr)    
 
+        if DEBUG:
+            self._status = 'pending'
+        
         propnames = set(_props_for(self.__class__))
         for k in set(self.dterms).intersection(propnames.union(set(self.__dict__.keys()))):
+
             p = getattr(self, k)
 
             if hasattr(p, 'dterms') and p is not wrt:
@@ -697,12 +761,16 @@ class Ch(object):
                 if reverse_mode:
                     lhs = self._compute_dr_wrt_sliced(p)
                     if isinstance(lhs, LinearOperator):
+                        tm_dr_wrt.pause()
                         dr2 = p.dr_wrt(wrt)
+                        tm_dr_wrt.resume()
                         indirect_dr = lhs.matmat(dr2) if dr2 != None else None
                     else:
                         indirect_dr = p.lmult_wrt(lhs, wrt)
                 else: # forward mode
-                    dr2 = p.dr_wrt(wrt)
+                    tm_dr_wrt.pause()
+                    dr2 = p.dr_wrt(wrt, profiler=profiler)
+                    tm_dr_wrt.resume()
                     if dr2 is not None:
                         indirect_dr = self.compute_rop(p, rhs=dr2)
 
@@ -711,37 +779,57 @@ class Ch(object):
 
         if len(drs)==0:
             result = None
-
         elif len(drs)==1:
             result = drs[0]
-
         else:
+            # TODO: ????????
+            # result = np.sum(x for x in drs)
             if not np.any([isinstance(a, LinearOperator) for a in drs]):
                 result = reduce(lambda x, y: x+y, drs)
             else:
                 result = LinearOperator(drs[0].shape, lambda x : reduce(lambda a, b: a.dot(x)+b.dot(x),drs))
 
         # TODO: figure out how/whether to do this.
-        # if result is not None and not sp.issparse(result):
-        #    nonzero = np.count_nonzero(result)
-        #    if nonzero > 0 and hasattr(result, 'size') and result.size / nonzero >= 10.0:
-        #         #import pdb; pdb.set_trace()
-        #         result = sp.csc_matrix(result)
-            
-            
+        if result is not None and not sp.issparse(result):
+            tm_nonzero = timer()
+            nonzero = np.count_nonzero(result)
+            if tm_nonzero() > 0.1:
+                pif('count_nonzero in {}sec'.format(tm_nonzero()))
+            if nonzero == 0 or hasattr(result, 'size') and result.size / float(nonzero) >= 10.0:
+                tm_convert_to_sparse = timer()
+                result = sp.csc_matrix(result)
+                import gc
+                gc.collect()
+                pif('converting result to sparse in {}sec'.format(tm_convert_to_sparse()))
+                        
         if (result is not None) and (not sp.issparse(result)) and (not isinstance(result, LinearOperator)):
             result = np.atleast_2d(result)
-            
+        
         # When the number of parents is one, it indicates that
         # caching this is probably not useful because not 
         # more than one parent will likely ask for this same
         # thing again in the same iteration of an optimization.
+        #
+        # When the number of parents is zero, this is the top
+        # level object and should be cached; when it's > 1
+        # cache the combinations of the children.
         #
         # If we *always* filled in the cache, it would require 
         # more memory but would occasionally save a little cpu,
         # on average.
         if len(self._parents.keys()) != 1:
             self._cache['drs'][wrt] = result
+
+        if DEBUG:
+            self._status = 'done'
+        
+        if getattr(self, '_make_dense', False) and sp.issparse(result):
+            result = result.todense()
+        if getattr(self, '_make_sparse', False) and not sp.issparse(result):
+            result = sp.csc_matrix(result)
+        
+        if tm_dr_wrt() > 0.1:
+            pif('dx of {} wrt {} in {}sec, sparse: {}'.format(self.short_name, wrt.short_name, tm_dr_wrt(), sp.issparse(result)))
 
         return result
 
@@ -754,11 +842,172 @@ class Ch(object):
     ########################################################
     # Visualization
 
-    def show_tree(self, cachelim=np.inf):
-        """Cachelim is in Mb. For any cached jacobians above cachelim, they are also added to the graph. """
-        
+    @property
+    def reset_flag(self):
+        """
+        Used as fn in loop_children_do
+        """
+        return lambda x: setattr(x, 'called_dr_wrt', False)
+
+    def loop_children_do(self, fn):
+        fn(self)
+        for dterm in self.dterms:
+            if hasattr(self, dterm):
+                dtval = getattr(self, dterm)
+                if hasattr(dtval, 'dterms') or hasattr(dtval, 'terms'):
+                    if hasattr(dtval, 'loop_children_do'):
+                        dtval.loop_children_do(fn)
+
+
+    def show_tree_cache(self, label, current_node=None):
+        '''
+        Show tree and cache info with color represent _status
+        Optionally accpet current_node arg to highlight the current node we are in
+        '''
+        import os
         import tempfile
         import subprocess
+
+        assert DEBUG, "Please use dr tree visualization functions in debug mode"
+
+        cache_path = os.path.abspath('profiles')
+        def string_for(self, my_name):
+
+            color_mapping = {'new' : 'grey', 'pending':'red', 'cached':'yellow', 'done': 'green'}
+            if hasattr(self, 'label'):
+                my_name = self.label
+            my_name = '%s (%s)' % (my_name, str(self.__class__.__name__))
+            result = []
+            if not hasattr(self, 'dterms'):
+                return result
+            for dterm in self.dterms:
+                if hasattr(self, dterm):
+                    dtval = getattr(self, dterm)
+                    if hasattr(dtval, 'dterms') or hasattr(dtval, 'terms'):
+                        child_label = getattr(dtval, 'label') if hasattr(dtval, 'label') else dterm
+                        child_label = '%s (%s)' % (child_label, str(dtval.__class__.__name__))
+                        src = 'aaa%d' % (id(self))
+                        dst = 'aaa%d' % (id(dtval))
+
+                        s = ''
+                        color = color_mapping[dtval._status] if hasattr(dtval, '_status') else 'grey'
+                        if dtval == current_node:
+                            color = 'blue'
+                        if isinstance(dtval, reordering.Concatenate) and len(dtval.dr_cached) > 0:
+                            s = 'dr_cached\n'
+                            for k, v in dtval.dr_cached.iteritems():
+                                if v is not None:
+                                    issparse = sp.issparse(v)
+                                    size = v.size 
+                                    if issparse:
+                                        size = v.shape[0] * v.shape[1]
+                                        nonzero = len(v.data)
+                                    else:
+                                        nonzero = np.count_nonzero(v)  
+                                    s += '\nsparse: %s\nsize: %d\nnonzero: %d\n' % (issparse, size, nonzero)
+                            # if dtval.called_dr_wrt:
+                            # #   dtval.called_dr_wrt = False
+                            #     color = 'brown3'
+                            # else:
+                            #     color = 'azure1'
+                        elif len(dtval._cache['drs']) > 0:
+                            s = '_cache\n'
+                            
+                            for k, v in dtval._cache['drs'].iteritems():
+                                if v is not None:
+                                    issparse = sp.issparse(v)
+                                    size = v.size
+                                    if issparse:
+                                        size = v.shape[0] * v.shape[1]
+                                        nonzero = len(v.data)
+                                    else:
+                                        nonzero = np.count_nonzero(v)     
+
+                                    s += '\nsparse: %s\nsize: %d\nnonzero: %d\n' % (issparse, size, nonzero)
+                                    if hasattr(dtval, '_cache_info'):
+                                        s += '\ncache hit:%s\n' % dtval._cache_info[k]
+                            # if hasattr(dtval,'called_dr_wrt') and dtval.called_dr_wrt:
+                            # #   dtval.called_dr_wrt = False
+                            #     color = 'brown3'
+                            # else:
+                            #     color = 'azure1'
+                        result += ['%s -> %s;' % (src, dst)]
+                        # Do not overwrite src
+                        #result += ['%s [label="%s"];' % (src, my_name)]
+                        result += ['%s [label="%s\n%s\n", color=%s, style=filled];' %
+                                   (dst, child_label, s, color)]
+                        result += string_for(getattr(self, dterm), dterm)
+            return result
+            
+
+        dot_file_contents = 'digraph G {\n%s\n}' % '\n'.join(list(set(string_for(self, 'root'))))
+        dot_file_name = os.path.join(cache_path, label)
+        png_file_name = os.path.join(cache_path, label+'.png')
+        with open(dot_file_name, 'w') as dot_file:
+            with open(png_file_name, 'w') as png_file:
+                dot_file.write(dot_file_contents)
+                dot_file.flush()
+
+                png_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+                subprocess.call(['dot', '-Tpng', '-o', png_file.name, dot_file.name])
+
+        import webbrowser
+        webbrowser.open('file://' + png_file.name)
+        
+        self.loop_children_do(self.reset_flag)
+
+    def show_tree_wrt(self, wrt):
+        import tempfile
+        import subprocess
+
+        assert DEBUG, "Please use dr tree visualization functions in debug mode"
+
+        def string_for(self, my_name, wrt):
+            if hasattr(self, 'label'):
+                my_name = self.label
+            my_name = '%s (%s)' % (my_name, str(self.__class__.__name__))
+            result = []
+            if not hasattr(self, 'dterms'):
+                return result
+            for dterm in self.dterms:
+                if hasattr(self, dterm):
+                    dtval = getattr(self, dterm)
+                    if hasattr(dtval, 'dterms') or hasattr(dtval, 'terms'):
+                        child_label = getattr(dtval, 'label') if hasattr(dtval, 'label') else dterm
+                        child_label = '%s (%s)' % (child_label, str(dtval.__class__.__name__))
+                        src = 'aaa%d' % (id(self))
+                        dst = 'aaa%d' % (id(dtval))
+                        result += ['%s -> %s;' % (src, dst)]
+                        result += ['%s [label="%s"];' % (src, my_name)]
+                        if wrt in dtval._cache['drs'] and dtval._cache['drs'][wrt] is not None:
+                            issparse = sp.issparse(dtval._cache['drs'][wrt])
+                            size = dtval._cache['drs'][wrt].size 
+                            nonzero = np.count_nonzero(dtval._cache['drs'][wrt])
+                            result += ['%s [label="%s\n is_sparse: %s\nsize: %d\nnonzero: %d"];' %
+                                       (dst, child_label, issparse, size,
+                                        nonzero)]
+                        else:
+                            result += ['%s [label="%s"];' % (dst, child_label)]
+                        result += string_for(getattr(self, dterm), dterm, wrt)
+            return result
+            
+        
+        dot_file_contents = 'digraph G {\n%s\n}' % '\n'.join(list(set(string_for(self, 'root', wrt))))
+        dot_file = tempfile.NamedTemporaryFile()
+        dot_file.write(dot_file_contents)
+        dot_file.flush()
+        png_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        subprocess.call(['dot', '-Tpng', '-o', png_file.name, dot_file.name])
+        import webbrowser
+        webbrowser.open('file://' + png_file.name)
+    
+    def show_tree(self, cachelim=np.inf):
+        """Cachelim is in Mb. For any cached jacobians above cachelim, they are also added to the graph. """
+        import tempfile
+        import subprocess
+
+        assert DEBUG, "Please use dr tree visualization functions in debug mode"
+
         def string_for(self, my_name):
             if hasattr(self, 'label'):
                 my_name = self.label
@@ -834,6 +1083,31 @@ class Ch(object):
         subprocess.call(['dot', '-Tpng', '-o', png_file.name, dot_file.name])
         import webbrowser
         webbrowser.open('file://' + png_file.name)
+
+
+    def tree_iterator(self, visited=None, path=None):
+        '''
+        Generator function that traverse the dr tree start from this node (self).
+        '''
+        if visited is None:
+            visited = set()
+
+        if self not in visited:
+            if path and isinstance(path, list):
+                path.append(self)
+
+            visited.add(self)
+            yield self
+
+            if not hasattr(self, 'dterms'):
+                yield
+
+            for dterm in self.dterms:
+                if hasattr(self, dterm):
+                    child = getattr(self, dterm)
+                    if hasattr(child, 'dterms') or hasattr(child, 'terms'):
+                        for node in child.tree_iterator(visited):
+                            yield node
 
     def floor(self):
         return ch_ops.floor(self)
@@ -997,6 +1271,39 @@ class ChLambda(Ch):
         if wrt is self._result:
             return 1
 
+# ChGroup is similar to ChLambda in that it's designed to expose the "internal"
+# inputs of result but, unlike ChLambda, result is kept internal and called when
+# compute_r and compute_dr_wrt is called to compute the relevant Jacobians.
+# This provides a way of effectively applying the chain rule in a different order.
+class ChGroup(Ch):
+    terms = ['result', 'args']
+    dterms = []
+    term_order = ['result', 'args']
+
+    def on_changed(self, which):
+        for argname in set(which).intersection(set(self.args.keys())):
+            if not self.args[argname].x is getattr(self, argname) :
+                self.args[argname].x = getattr(self, argname)
+    
+    # right now the entries in args have to refer to terms/dterms of result,
+    # it would be better if they could be "internal" as well, but for now the idea
+    # is that result may itself be a ChLambda.
+    def __init__(self, result, args):
+        self.args = { argname: ChHandle(x=arg) for argname, arg in args.items() }
+        for argname, arg in self.args.items():
+            setattr(result, argname, arg)
+            if result.is_dr_wrt(arg.x):
+                self.add_dterm(argname, arg.x)
+            else:
+                self.terms.append(argname)
+                setattr(self, argname, arg.x)
+        self._result = result
+        
+    def compute_r(self):
+        return self._result.r
+       
+    def compute_dr_wrt(self, wrt):
+        return self._result.dr_wrt(wrt)
 
 import ch_ops
 from ch_ops import *

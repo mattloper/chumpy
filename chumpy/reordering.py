@@ -288,11 +288,11 @@ class Select(Permute):
     def compute_dr_wrt(self, obj):
         if obj is self.a:
             if not hasattr(self, '_dr_cached'):
-                IS = np.arange(len(self.idxs)).flatten()
+                IS = np.arange(len(self.idxs))
                 JS = self.idxs.ravel()
                 ij = np.vstack((row(IS), row(JS)))
                 data = np.ones(len(self.idxs))
-                self._dr_cached = sp.csc_matrix((data, ij), shape=(len(self.idxs), len(self.a.r.ravel())))
+                self._dr_cached = sp.csc_matrix((data, ij), shape=(len(self.idxs), np.prod(self.a.shape)))
             return self._dr_cached
         
     def on_changed(self, which):
@@ -383,7 +383,9 @@ class Concatenate(ch.Ch):
         return self._everything
     
     def compute_dr_wrt(self, wrt):
-        if wrt in self.dr_cached:
+        if not hasattr(self, 'dr_cached'):
+            self.dr_cached = weakref.WeakKeyDictionary()
+        if wrt in self.dr_cached and self.dr_cached[wrt] is not None:
             return self.dr_cached[wrt]
         
         if wrt not in self.our_terms:
@@ -408,8 +410,15 @@ class Concatenate(ch.Ch):
         JS   = np.concatenate(JS).ravel()
         data = np.concatenate(data)
                 
-        self.dr_cached[wrt] = sp.csc_matrix((data, (IS, JS)), shape=(self.r.size, wrt.size))
-        return self.dr_cached[wrt]
+        res = sp.csc_matrix((data, (IS, JS)), shape=(self.r.size, wrt.size))
+        
+        if len(self._parents.keys()) != 1:
+            self.dr_cached[wrt] = res
+        else:
+            self.dr_cached[wrt] = None
+
+        return res
+
 
 def expand_concatenates(mtxs, axis=0):
     mtxs = list(mtxs)
@@ -423,11 +432,11 @@ def expand_concatenates(mtxs, axis=0):
     return done
 
 
-def concatenate(mtxs, axis=0):
+def concatenate(mtxs, axis=0, **kwargs):
 
     mtxs = expand_concatenates(mtxs, axis)
 
-    result = Concatenate()
+    result = Concatenate(**kwargs)
     result.dterms = []
     for i, mtx in enumerate(mtxs):
         result.dterms.append('m%d' % (i,))
@@ -435,11 +444,11 @@ def concatenate(mtxs, axis=0):
     result.axis = axis
     return result
     
-def hstack(mtxs):
-    return concatenate(mtxs, axis=1)
+def hstack(mtxs, **kwargs):
+    return concatenate(mtxs, axis=1, **kwargs)
 
-def vstack(mtxs):
-    return concatenate([atleast_2d(m) for m in mtxs], axis=0)
+def vstack(mtxs, **kwargs):
+    return concatenate([atleast_2d(m) for m in mtxs], axis=0, **kwargs)
 
-def dstack(mtxs):
-    return concatenate([atleast_3d(m) for m in mtxs], axis=2)
+def dstack(mtxs, **kwargs):
+    return concatenate([atleast_3d(m) for m in mtxs], axis=2, **kwargs)

@@ -6,6 +6,8 @@ import extras
 import testing
 from version import version as __version__
 
+from version import version as __version__
+
 from numpy import bool, int, float, complex, object, unicode, str, nan, inf
 
 def test():
