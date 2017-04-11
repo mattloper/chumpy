@@ -7,8 +7,10 @@ See LICENCE.txt for licensing and contact information.
 from distutils.core import setup
 import importlib
 from pip.req import parse_requirements
+from os.path import join, split
 
-install_reqs = parse_requirements('requirements.txt', session=False)
+req_fname = join(split(__file__)[0], 'requirements.txt')
+install_reqs = parse_requirements(req_fname, session=False)
 install_requires = [str(ir.req) for ir in install_reqs]
 
 setup(name='chumpy',
@@ -32,7 +34,7 @@ setup(name='chumpy',
         # Indicate who your project is intended for
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Mathematics',
-        
+
         # Pick your license as you wish (should match "license" above)
         'License :: OSI Approved :: MIT License',
 
@@ -40,9 +42,9 @@ setup(name='chumpy',
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        
+
         'Operating System :: MacOS :: MacOS X',
-        'Operating System :: POSIX :: Linux'        
+        'Operating System :: POSIX :: Linux'
     ],
 )
 
