@@ -7,10 +7,8 @@ See LICENCE.txt for licensing and contact information.
 from distutils.core import setup
 import importlib
 from pip.req import parse_requirements
-from os.path import join, split
 
-req_fname = join(split(__file__)[0], 'requirements.txt')
-install_reqs = parse_requirements(req_fname, session=False)
+install_reqs = parse_requirements('requirements.txt', session=False)
 install_requires = [str(ir.req) for ir in install_reqs]
 
 setup(name='chumpy',

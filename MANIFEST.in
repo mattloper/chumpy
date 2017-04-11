@@ -1,4 +1,4 @@
-global-include . *.py *.c *.h Makefile *.pyx 
+global-include . *.py *.c *.h Makefile *.pyx requirements.txt
 global-exclude chumpy/optional_test_performance.py
 prune dist
 
