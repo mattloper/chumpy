@@ -5,15 +5,14 @@ See LICENCE.txt for licensing and contact information.
 """
 
 from distutils.core import setup
-import importlib
 from pip.req import parse_requirements
+from runpy import run_path
 
 install_reqs = parse_requirements('requirements.txt', session=False)
 install_requires = [str(ir.req) for ir in install_reqs]
 
 def get_version():
-    namespace = {}
-    execfile('chumpy/version.py', namespace)
+    namespace = run_path('chumpy/version.py')
     return namespace['version']
 
 setup(name='chumpy',
