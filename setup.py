@@ -5,14 +5,18 @@ See LICENCE.txt for licensing and contact information.
 """
 
 from distutils.core import setup
-import importlib
 from pip.req import parse_requirements
+from runpy import run_path
 
 install_reqs = parse_requirements('requirements.txt', session=False)
 install_requires = [str(ir.req) for ir in install_reqs]
 
+def get_version():
+    namespace = run_path('chumpy/version.py')
+    return namespace['version']
+
 setup(name='chumpy',
-    version=importlib.import_module('chumpy').__version__,
+    version=get_version(),
     packages = ['chumpy'],
     author='Matthew Loper',
     author_email='matt.loper@gmail.com',
