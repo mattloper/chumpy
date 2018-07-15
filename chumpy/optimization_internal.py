@@ -2,9 +2,9 @@ import sys
 import warnings
 import numpy as np
 import scipy.sparse as sp
-import ch, utils
-from ch import pif
-from utils import timer
+from . import ch, utils
+from .ch import pif
+from .utils import timer
 
 
 def clear_cache_single(node):
@@ -115,10 +115,10 @@ def setup_sparse_solver(sparse_solver):
     }
     if callable(sparse_solver):
         return sparse_solver
-    elif isinstance(sparse_solver, str) and sparse_solver in _solver_fns.keys():
+    elif isinstance(sparse_solver, str) and sparse_solver in list(_solver_fns.keys()):
         return _solver_fns[sparse_solver]
     else:
-        raise Exception('sparse_solver argument must be either a string in the set (%s) or have the api of scipy.sparse.linalg.spsolve.' % ', '.join(_solver_fns.keys()))
+        raise Exception('sparse_solver argument must be either a string in the set (%s) or have the api of scipy.sparse.linalg.spsolve.' % ', '.join(list(_solver_fns.keys())))
 
 
 def setup_objective(obj, free_variables, on_step=None, disp=True, make_dense=False):
@@ -138,7 +138,7 @@ def setup_objective(obj, free_variables, on_step=None, disp=True, make_dense=Fal
         obj = ch.concatenate([f.ravel() for f in obj])
     elif isinstance(obj, dict):
         labels = obj
-        obj = ch.concatenate([f.ravel() for f in obj.values()])
+        obj = ch.concatenate([f.ravel() for f in list(obj.values())])
     # build objective
     x = np.concatenate([freevar.r.ravel() for freevar in free_variables])
     obj = ChInputsStacked(obj=obj, free_variables=free_variables, x=x, make_dense=make_dense)
@@ -148,7 +148,7 @@ def setup_objective(obj, free_variables, on_step=None, disp=True, make_dense=Fal
             on_step(obj)
         if disp:
             report_line = ['%.2e' % (np.sum(obj.r**2),)]
-            for label, objective in sorted(labels.items(), key=lambda x: x[0]):
+            for label, objective in sorted(list(labels.items()), key=lambda x: x[0]):
                 report_line.append('%s: %.2e' % (label, np.sum(objective.r**2)))
             report_line = " | ".join(report_line) + '\n'
             sys.stderr.write(report_line)

@@ -44,13 +44,15 @@ __all__ += wont_implement
 __all__ += numpy_array_creation_routines
     
     
-import ch
+from . import ch
+import six
 import numpy as np
 import warnings
-import cPickle as pickle
+from six.moves import cPickle as pickle
 import scipy.sparse as sp
-from utils import row, col
+from .utils import row, col
 from copy import copy as copy_copy
+from functools import reduce
 
 __all__ += ['pi', 'set_printoptions']
 pi = np.pi
@@ -645,8 +647,8 @@ class A_extremum(ch.Ch):
             # np.amin here probably
             idxs = np.arange(mtx.size).reshape(mtx.shape)
             mn = np.amin(idxs, axis=axis)
-            stride = np.array(mtx.strides)
-            stride /= np.min(stride) # go from bytes to num elements
+            mtx_strides = np.array(mtx.strides)
+            stride = mtx_strides / np.min(mtx_strides) # go from bytes to num elements
             stride = stride[axis]
         return mn, stride
 
