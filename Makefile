@@ -1,7 +1,8 @@
 all:
 
 upload:
-	python setup.py register sdist upload
+	python setup.py sdist
+	twine upload dist/*
 #sdist:
 #	python setup.py sdist && rsync -avz dist/chumpy-0.5.tar.gz files:~/chumpy/latest.tgz && python ./api_compatibility.py && rsync -avz ./api_compatibility.html files:~/chumpy/
 
