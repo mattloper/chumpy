@@ -12,13 +12,18 @@ __all__ = ['inv', 'svd', 'det', 'slogdet', 'pinv', 'lstsq', 'norm']
 
 import numpy as np
 import scipy.sparse as sp
-from .ch import Ch, depends_on, NanDivide
+from .ch import Ch, depends_on
+from .ch_ops import NanDivide
+from .ch_ops import asarray as ch_asarray
+from .ch_ops import sqrt as ch_sqrt
+from .ch_ops import sum as ch_sum
+from .reordering import concatenate as ch_concatenate
+from .ch_random import randn as ch_random_randn
 from .utils import row, col
-from . import ch
 
 
 try:
-    asarray = ch.asarray
+    asarray = ch_asarray
     import inspect
     exec(''.join(inspect.getsourcelines(np.linalg.tensorinv)[0]))
     __all__.append('tensorinv')
@@ -28,13 +33,13 @@ def norm(x, ord=None, axis=None):
     if ord is not None or axis is not None:
         raise NotImplementedError("'ord' and 'axis' should be None for now.")
 
-    return ch.sqrt(ch.sum(x**2))
+    return ch_sqrt(ch_sum(x**2))
 
 # This version works but derivatives are too slow b/c of nested loop in Svd implementation.
 # def lstsq(a, b):
 #     u, s, v = Svd(a)
 #     x = (v.T / s).dot(u.T.dot(b))
-#     residuals = NotImplementedError # ch.sum((a.dot(x) - b)**2, axis=0)
+#     residuals = NotImplementedError # ch_sum((a.dot(x) - b)**2, axis=0)
 #     rank = NotImplementedError
 #     s = NotImplementedError
 #     return x, residuals, rank, s
@@ -46,7 +51,7 @@ def lstsq(a, b, rcond=-1):
     x = Ch(lambda a, b : pinv(a).dot(b))
     x.a = a
     x.b = b
-    residuals = ch.sum(  (x.a.dot(x) - x.b) **2 , axis=0)
+    residuals = ch_sum(  (x.a.dot(x) - x.b) **2 , axis=0)
     rank = NotImplementedError
     s = NotImplementedError
     
@@ -278,12 +283,12 @@ def slogdet(*args):
     else:
         r2 = [LogAbsDet(x=arg) for arg in args]
         r1 = [SignLogAbsDet(r) for r in r2]
-        r2 = ch.concatenate(r2)
+        r2 = ch_concatenate(r2)
         return r1, r2
 
 def main():
     
-    tmp = ch.random.randn(100).reshape((10,10))
+    tmp = ch_random_randn(100).reshape((10,10))
     print('chumpy version: ' + str(slogdet(tmp)[1].r))
     print('old version:' + str(np.linalg.slogdet(tmp.r)[1]))
 

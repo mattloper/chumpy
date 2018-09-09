@@ -11,7 +11,10 @@ tidy:
 
 test:  clean qtest
 qtest:   all
-	python -m unittest
+	# For some reason the import changes for Python 3 caused the Python 2 test
+	# loader to give up without loading any tests. So we discover them ourselves.
+	# python -m unittest
+	find chumpy -name 'test_*.py' | sed -e 's/\.py$$//' -e 's/\//./' | xargs python -m unittest
 
 coverage: clean qcov
 qcov: all
