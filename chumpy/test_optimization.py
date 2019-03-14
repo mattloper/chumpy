@@ -9,12 +9,12 @@ See LICENCE.txt for licensing and contact information.
 import time
 from numpy import *
 import unittest
-import ch
-from optimization import minimize
-from ch import Ch
+from . import ch
+from .optimization import minimize
+from .ch import Ch
 import numpy as np
 from scipy.optimize import rosen, rosen_der
-from utils import row, col
+from .utils import row, col
 
 
 visualize = False
@@ -96,8 +96,8 @@ class RosenCh(Ch):
             if visualize:
                 import matplotlib.pyplot as plt
                 residuals = np.sum(self.r**2)
-                print '------> RESIDUALS %.2e' % (residuals,)
-                print '------> CURRENT GUESS %s' % (str(self.x.r),)
+                print('------> RESIDUALS %.2e' % (residuals,))
+                print('------> CURRENT GUESS %s' % (str(self.x.r),))
                 plt.figure(123)
                 
                 if not hasattr(self, 'vs'):
@@ -134,14 +134,14 @@ class TestOptimization(unittest.TestCase):
         
     @unittest.skip('negative sign in exponent screws with reverse mode')
     def test_bfgs_rosen(self):
-        from optimization import minimize_bfgs_lsq        
+        from .optimization import minimize_bfgs_lsq        
         obj, freevars = Rosen()        
         minimize_bfgs_lsq(obj=obj, niters=421, verbose=False, free_variables=freevars)        
         self.assertTrue(freevars[0].r[0]==1.)
         self.assertTrue(freevars[1].r[0]==1.)
 
     def test_bfgs_madsen(self):
-        from ch import SumOfSquares
+        from .ch import SumOfSquares
         import scipy.optimize
         obj = Ch(lambda x : SumOfSquares(Madsen(x = x)) )
         

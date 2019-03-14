@@ -18,11 +18,11 @@ import weakref
 import copy as external_copy
 from functools import wraps
 from scipy.sparse.linalg.interface import LinearOperator
-import utils
-from utils import row, col
+from .utils import row, col, timer, convert_inputs_to_sparse_if_necessary
 import collections
 from copy import deepcopy
-from utils import timer
+from functools import reduce
+
 
 
 # Turn this on if you want the profiler injected
@@ -102,7 +102,7 @@ class Ch(object):
             object.__setattr__(result, '_cache_info', {})
             object.__setattr__(result, '_status', 'new')
         
-        for name, default_val in cls._default_kwargs.items():
+        for name, default_val in list(cls._default_kwargs.items()):
             object.__setattr__(result, '_%s' % name, kwargs.get(name, default_val))
             if name in kwargs:
                 del kwargs[name]
@@ -190,10 +190,10 @@ class Ch(object):
 
     
     def reshape(self, *args):
-        return reordering.reshape(a=self, newshape=args if len(args)>1 else args[0])
+        return reshape(a=self, newshape=args if len(args)>1 else args[0])
     
     def ravel(self):
-        return reordering.reshape(a=self, newshape=(-1))
+        return reshape(a=self, newshape=(-1))
     
     def __hash__(self):
         return id(self)
@@ -293,7 +293,7 @@ class Ch(object):
         # What allows slicing.
         if True:
             inner = wrt
-            while issubclass(inner.__class__, reordering.Permute):
+            while issubclass(inner.__class__, Permute):
                 inner = inner.a
                 if inner is self: 
                     return None
@@ -325,7 +325,7 @@ class Ch(object):
         return len(self.r)
         
     def minimize(self, *args, **kwargs):
-        import optimization        
+        from . import optimization        
         return optimization.minimize(self, *args, **kwargs)
         
     def __array__(self, *args):
@@ -339,7 +339,7 @@ class Ch(object):
         setattr(self, dterm_name, dterm)
     
     def copy(self):
-        return ch_ops.copy(self)
+        return copy(self)
     
     def __getstate__(self):
         # Have to get rid of WeakKeyDictionaries for serialization
@@ -408,7 +408,7 @@ class Ch(object):
           
     def _invalidate_cacheprop_names(self, names):
         nameset = set(names)
-        for func_name, v in self._depends_on_deps.items():
+        for func_name, v in list(self._depends_on_deps.items()):
             if len(nameset.intersection(v['deps'])) > 0:
                 v['out_of_date'] = True
         
@@ -427,7 +427,7 @@ class Ch(object):
                 next._cache['drs'].clear()
                 next._itr = itr
 
-                for parent, parent_dict in next._parents.items():
+                for parent, parent_dict in list(next._parents.items()):
                     object.__setattr__(parent, '_dirty_vars', parent._dirty_vars.union(parent_dict['varnames']))
                     parent._invalidate_cacheprop_names(parent_dict['varnames']) 
                     todo.append(parent)
@@ -436,14 +436,14 @@ class Ch(object):
 
 
     def clear_cache_wrt(self, wrt, itr=None):
-        if self._cache['drs'].has_key(wrt):
+        if wrt in self._cache['drs']:
             self._cache['drs'][wrt] = None
 
         if hasattr(self, 'dr_cached') and wrt in self.dr_cached:
             self.dr_cached[wrt] = None
 
         if itr is None or itr != self._itr:
-            for parent, parent_dict in self._parents.items():
+            for parent, parent_dict in list(self._parents.items()):
                 if wrt in parent._cache['drs'] or (hasattr(parent, 'dr_cached') and wrt in parent.dr_cached):
                     parent.clear_cache_wrt(wrt=wrt, itr=itr)
                 object.__setattr__(parent, '_dirty_vars', parent._dirty_vars.union(parent_dict['varnames']))
@@ -501,7 +501,7 @@ class Ch(object):
         tmp = np.arange(np.prod(shape)).reshape(shape).__getitem__(key)
         idxs = tmp.ravel()
         newshape = tmp.shape
-        return reordering.Select(a=self, idxs=idxs, preferred_shape=newshape)
+        return Select(a=self, idxs=idxs, preferred_shape=newshape)
         
     def __setitem__(self, key, value, itr=None): 
 
@@ -526,7 +526,7 @@ class Ch(object):
         else:
             inner = self
             while not inner.is_ch_baseclass():
-                if issubclass(inner.__class__, reordering.Permute):
+                if issubclass(inner.__class__, Permute):
                     inner = inner.a
                 else: 
                     raise Exception("Can't set array that is function of arrays.")
@@ -563,19 +563,19 @@ class Ch(object):
         
     @property
     def T(self):
-        return reordering.transpose(self)
+        return transpose(self)
         
     def transpose(self, *axes):
-        return reordering.transpose(self, *axes)
+        return transpose(self, *axes)
         
     def squeeze(self, axis=None):
-        return ch_ops.squeeze(self, axis)
+        return squeeze(self, axis)
         
     def mean(self, axis=None):
-        return ch_ops.mean(self, axis=axis)
+        return mean(self, axis=axis)
 
     def sum(self, axis=None):
-        return ch_ops.sum(self, axis=axis)
+        return sum(self, axis=axis)
 
     def _call_on_changed(self):
 
@@ -629,7 +629,7 @@ class Ch(object):
             
             # TODO: Figure out how/whether to do this.
             tm_maybe_sparse = timer()
-            lhs, rhs = utils.convert_inputs_to_sparse_if_necessary(lhs, rhs)
+            lhs, rhs = convert_inputs_to_sparse_if_necessary(lhs, rhs)
             if tm_maybe_sparse() > 0.1:
                 pif('convert_inputs_to_sparse_if_necessary in {}sec'.format(tm_maybe_sparse()))
 
@@ -662,7 +662,7 @@ class Ch(object):
 
             if hasattr(p, 'dterms') and p is not wrt and p.is_dr_wrt(wrt):
                 if not isinstance(p, Ch):
-                    print 'BROKEN!'
+                    print('BROKEN!')
                     raise Exception('Broken Should be Ch object')
 
                 indirect_dr = p.lmult_wrt(self._superdot(lhs, self._compute_dr_wrt_sliced(p)), wrt)
@@ -817,7 +817,7 @@ class Ch(object):
         # If we *always* filled in the cache, it would require 
         # more memory but would occasionally save a little cpu,
         # on average.
-        if len(self._parents.keys()) != 1:
+        if len(list(self._parents.keys())) != 1:
             self._cache['drs'][wrt] = result
 
         if DEBUG:
@@ -893,9 +893,9 @@ class Ch(object):
                         color = color_mapping[dtval._status] if hasattr(dtval, '_status') else 'grey'
                         if dtval == current_node:
                             color = 'blue'
-                        if isinstance(dtval, reordering.Concatenate) and len(dtval.dr_cached) > 0:
+                        if isinstance(dtval, Concatenate) and len(dtval.dr_cached) > 0:
                             s = 'dr_cached\n'
-                            for k, v in dtval.dr_cached.iteritems():
+                            for k, v in dtval.dr_cached.items():
                                 if v is not None:
                                     issparse = sp.issparse(v)
                                     size = v.size 
@@ -913,7 +913,7 @@ class Ch(object):
                         elif len(dtval._cache['drs']) > 0:
                             s = '_cache\n'
                             
-                            for k, v in dtval._cache['drs'].iteritems():
+                            for k, v in dtval._cache['drs'].items():
                                 if v is not None:
                                     issparse = sp.issparse(v)
                                     size = v.size
@@ -1029,8 +1029,8 @@ class Ch(object):
                         result += string_for(getattr(self, dterm), dterm)
 
             if cachelim != np.inf and hasattr(self, '_cache') and 'drs' in self._cache:
-                import cPickle as pickle
-                for dtval, jac in self._cache['drs'].items():
+                from six.moves import cPickle as pickle
+                for dtval, jac in list(self._cache['drs'].items()):
                     # child_label = getattr(dtval, 'label') if hasattr(dtval, 'label') else dterm
                     # child_label = '%s (%s)' % (child_label, str(dtval.__class__.__name__))
                     src = 'aaa%d' % (id(self))
@@ -1110,58 +1110,59 @@ class Ch(object):
                             yield node
 
     def floor(self):
-        return ch_ops.floor(self)
+        return floor(self)
     
     def ceil(self):
-        return ch_ops.ceil(self)
+        return ceil(self)
 
     def dot(self, other):
-        return ch_ops.dot(self, other)
+        return dot(self, other)
 
     def cumsum(self, axis=None):
-        return ch_ops.cumsum(a=self, axis=axis)
+        return cumsum(a=self, axis=axis)
         
     def min(self, axis=None):
-        return ch_ops.amin(a=self, axis=axis)
+        return amin(a=self, axis=axis)
     
     def max(self, axis=None):
-        return ch_ops.amax(a=self, axis=axis)
+        return amax(a=self, axis=axis)
 
     ########################################################
     # Operator overloads        
 
     def __pos__(self): return self    
-    def __neg__(self): return ch_ops.negative(self)
+    def __neg__(self): return negative(self)
 
-    def __add__ (self, other): return ch_ops.add(a=self, b=other)
-    def __radd__(self, other): return ch_ops.add(a=other, b=self)
+    def __add__ (self, other): return add(a=self, b=other)
+    def __radd__(self, other): return add(a=other, b=self)
 
-    def __sub__ (self, other): return ch_ops.subtract(a=self, b=other)
-    def __rsub__(self, other): return ch_ops.subtract(a=other, b=self)
+    def __sub__ (self, other): return subtract(a=self, b=other)
+    def __rsub__(self, other): return subtract(a=other, b=self)
         
-    def __mul__ (self, other): return ch_ops.multiply(a=self, b=other)
-    def __rmul__(self, other): return ch_ops.multiply(a=other, b=self)
+    def __mul__ (self, other): return multiply(a=self, b=other)
+    def __rmul__(self, other): return multiply(a=other, b=self)
         
-    def __div__ (self, other): return ch_ops.divide(x1=self, x2=other)
-    def __rdiv__(self, other): return ch_ops.divide(x1=other, x2=self)
+    def __div__ (self, other): return divide(x1=self, x2=other)
+    def __truediv__ (self, other): return divide(x1=self, x2=other)
+    def __rdiv__(self, other): return divide(x1=other, x2=self)
 
-    def __pow__ (self, other): return ch_ops.power(x=self, pow=other)
-    def __rpow__(self, other): return ch_ops.power(x=other, pow=self)
+    def __pow__ (self, other): return power(x=self, pow=other)
+    def __rpow__(self, other): return power(x=other, pow=self)
         
     def __rand__(self, other): return self.__and__(other)
 
-    def __abs__ (self): return ch_ops.abs(self)
+    def __abs__ (self): return abs(self)
     
-    def __gt__(self, other): return ch_ops.greater(self, other)
-    def __ge__(self, other): return ch_ops.greater_equal(self, other)
+    def __gt__(self, other): return greater(self, other)
+    def __ge__(self, other): return greater_equal(self, other)
         
-    def __lt__(self, other): return ch_ops.less(self, other)
-    def __le__(self, other): return ch_ops.less_equal(self, other)
+    def __lt__(self, other): return less(self, other)
+    def __le__(self, other): return less_equal(self, other)
     
-    def __ne__(self, other): return ch_ops.not_equal(self, other)
+    def __ne__(self, other): return not_equal(self, other)
     
     # not added yet because of weak key dict conflicts
-    #def __eq__(self, other): return ch_ops.equal(self, other)
+    #def __eq__(self, other): return equal(self, other)
 
 
 Ch._reserved_kw = set(Ch.__dict__.keys())
@@ -1203,7 +1204,7 @@ def depends_on(*dependencies):
         
         @wraps(func)
         def with_caching(self, *args, **kwargs):
-            func_name = func.func_name
+            func_name = func.__name__
             sdf = self._depends_on_deps[func_name]
             if sdf['out_of_date'] == True:
                 #tm = time.time()
@@ -1248,7 +1249,7 @@ class ChLambda(Ch):
                 if initial_arg in args:
                     args[initial_arg].x = initial_args[initial_arg]        
         result = lmb(**args)
-        for argname, arg in args.items():
+        for argname, arg in list(args.items()):
             if result.is_dr_wrt(arg.x):
                 self.add_dterm(argname, arg.x)
             else:
@@ -1289,8 +1290,8 @@ class ChGroup(Ch):
     # it would be better if they could be "internal" as well, but for now the idea
     # is that result may itself be a ChLambda.
     def __init__(self, result, args):
-        self.args = { argname: ChHandle(x=arg) for argname, arg in args.items() }
-        for argname, arg in self.args.items():
+        self.args = { argname: ChHandle(x=arg) for argname, arg in list(args.items()) }
+        for argname, arg in list(self.args.items()):
             setattr(result, argname, arg)
             if result.is_dr_wrt(arg.x):
                 self.add_dterm(argname, arg.x)
@@ -1305,17 +1306,18 @@ class ChGroup(Ch):
     def compute_dr_wrt(self, wrt):
         return self._result.dr_wrt(wrt)
 
-import ch_ops
-from ch_ops import *
-__all__ += ch_ops.__all__
+from .ch_ops import *
+from .ch_ops import __all__ as all_ch_ops
+__all__ += all_ch_ops
 
-import reordering
-from reordering import *
-__all__ += reordering.__all__
+from .reordering import *
+from .reordering import Permute
+from .reordering import __all__ as all_reordering
+__all__ += all_reordering
 
 
-import linalg
-import ch_random as random
+from . import linalg
+from . import ch_random as random
 __all__ += ['linalg', 'random']
 
 
@@ -1339,16 +1341,16 @@ def main():
     x30 = Ch(30)
     
     tmp = ChLambda(lambda x, y, z: Ch(1) + Ch(2) * Ch(3) + 4)
-    print tmp.dr_wrt(tmp.x)
+    print(tmp.dr_wrt(tmp.x))
     import pdb; pdb.set_trace()
     #a(b(c(d(e(f),g),h)))
     
     blah = tst(x10, x20, x30)
     
-    print blah.r
+    print(blah.r)
 
 
-    print foo
+    print(foo)
     
     import pdb; pdb.set_trace()
     

@@ -9,11 +9,11 @@ See LICENCE.txt for licensing and contact information.
 __all__ = ['minimize']
 
 import numpy as np
-import ch
+from . import ch
 import scipy.sparse as sp
 import scipy.optimize
 
-from optimization_internal import minimize_dogleg
+from .optimization_internal import minimize_dogleg
 
 #from memory_profiler import profile, memory_usage
 
@@ -43,12 +43,12 @@ def minimize(fun, x0, method='dogleg', bounds=None, constraints=(), tol=None, ca
     if isinstance(fun, list) or isinstance(fun, tuple):
         fun = ch.concatenate([f.ravel() for f in fun])
     if isinstance(fun, dict):
-        fun = ch.concatenate([f.ravel() for f in fun.values()])
+        fun = ch.concatenate([f.ravel() for f in list(fun.values())])
     obj = fun
     free_variables = x0
 
 
-    from ch import SumOfSquares
+    from .ch import SumOfSquares
 
     hessp = None
     hess = None

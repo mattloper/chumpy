@@ -4,9 +4,9 @@ Author(s): Matthew Loper
 See LICENCE.txt for licensing and contact information.
 """
 
-import ch
+from .ch import Ch
 import numpy as np
-from utils import row, col
+from .utils import row, col
 import scipy.sparse as sp
 import weakref
 
@@ -15,13 +15,13 @@ __all__ = ['sort', 'tile', 'repeat', 'transpose', 'rollaxis', 'swapaxes', 'resha
            'concatenate', 'vstack', 'hstack', 'dstack', 'ravel', 'diag', 'diagflat', 'roll', 'rot90']
 
 # Classes deriving from "Permute" promise to only reorder/reshape
-class Permute(ch.Ch):
+class Permute(Ch):
     pass
 
 def ravel(a, order='C'):
     assert(order=='C')
     if isinstance (a, np.ndarray):
-        self = ch.Ch(a)
+        self = Ch(a)
 
     return reshape(a=a, newshape=(-1,))
 
@@ -184,7 +184,7 @@ def reshape(a, newshape):
         a = a.a
     return Reshape(a=a, newshape=newshape)
 
-# class And(ch.Ch):
+# class And(Ch):
 #     dterms = 'x1', 'x2'
 #
 #     def compute_r(self):
@@ -302,7 +302,7 @@ class Select(Permute):
 
     
 
-class AtleastNd(ch.Ch):
+class AtleastNd(Ch):
     dterms = 'x'
     terms = 'ndims'
     
@@ -354,7 +354,7 @@ def fliplr(m):
 def flipud(m):
     return m[::-1,...]
     
-class Concatenate(ch.Ch):
+class Concatenate(Ch):
 
     def on_changed(self, which):
         if not hasattr(self, 'dr_cached'):
@@ -412,7 +412,7 @@ class Concatenate(ch.Ch):
                 
         res = sp.csc_matrix((data, (IS, JS)), shape=(self.r.size, wrt.size))
         
-        if len(self._parents.keys()) != 1:
+        if len(list(self._parents.keys())) != 1:
             self.dr_cached[wrt] = res
         else:
             self.dr_cached[wrt] = None

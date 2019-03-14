@@ -12,7 +12,7 @@ import unittest
 import numpy as np
 import scipy.sparse as sp
 
-import ch
+from . import ch
 
 class TestCh(unittest.TestCase):
     
@@ -203,9 +203,9 @@ class TestCh(unittest.TestCase):
         self.assertTrue(y.r[0] == 15) 
         a.__setattr__('x', np.array(100), 2)
         self.assertTrue(y.r[0] == 105)  
-        a.__setitem__(range(0,1), np.array(200), 2)
+        a.__setitem__(list(range(0,1)), np.array(200), 2)
         self.assertTrue(y.r[0] == 105)        
-        a.__setitem__(range(0,1), np.array(200), 3)
+        a.__setitem__(list(range(0,1)), np.array(200), 3)
         self.assertTrue(y.r[0] == 205)        
         
 
@@ -257,7 +257,7 @@ class TestCh(unittest.TestCase):
         self.assertTrue(dr2 is not dr1)
     
     def test_transpose(self):
-        from utils import row, col
+        from .utils import row, col
         from copy import deepcopy
         for which in ('C', 'F'): # test in fortran and contiguous mode
             a = ch.Ch(np.require(np.zeros(8).reshape((4,2)), requirements=which))
@@ -301,13 +301,13 @@ class TestCh(unittest.TestCase):
         # attribute, which is a nonserializable WeakKeyDictionary. 
         # So we pickle/unpickle, change a child and verify the value
         # at root, and verify that both children have parentage.
-        import cPickle as pickle
+        from six.moves import cPickle as pickle
         tmp = ch.Ch(10) + ch.Ch(20)
         tmp = pickle.loads(pickle.dumps(tmp))
         tmp.b.x = 30
         self.assertTrue(tmp.r[0] == 40)
-        self.assertTrue(tmp.a._parents.keys()[0] == tmp)
-        self.assertTrue(tmp.a._parents.keys()[0] == tmp.b._parents.keys()[0])
+        self.assertTrue(list(tmp.a._parents.keys())[0] == tmp)
+        self.assertTrue(list(tmp.a._parents.keys())[0] == list(tmp.b._parents.keys())[0])
         
     def test_chlambda1(self):
         c1, c2, c3 = ch.Ch(1), ch.Ch(2), ch.Ch(3)
@@ -341,7 +341,7 @@ class TestCh(unittest.TestCase):
         
     
     def test_amax(self):
-        from ch import amax
+        from .ch import amax
         import numpy as np
         arr = np.empty((5,2,3,7))
         arr.flat[:] = np.sin(np.arange(arr.size)*1000.)
@@ -354,8 +354,8 @@ class TestCh(unittest.TestCase):
             self.assertTrue(np.max(np.abs(pred-real)) < 1e-10)
 
     def test_maximum(self):
-        from utils import row, col
-        from ch import maximum
+        from .utils import row, col
+        from .ch import maximum
         
         # Make sure that when we compare the max of two *identical* numbers,
         # we get the right derivatives wrt both
@@ -431,7 +431,7 @@ class TestCh(unittest.TestCase):
             
 
     def test_matmatmult(self):
-        from ch import dot
+        from .ch import dot
         mtx1 = ch.Ch(np.arange(6).reshape((3,2)))
         mtx2 = ch.Ch(np.arange(8).reshape((2,4))*10)
         
@@ -594,9 +594,9 @@ class TestCh(unittest.TestCase):
                 theano_sse = (TF**2.).sum()
                 theano_grad = theano.gradient.grad(theano_sse, Ts[which])
                 theano_fn = function(Ts, theano_grad)
-                print theano_fn(*vals)
+                print(theano_fn(*vals))
                 C_result_grad = ch.SumOfSquares(C_result).dr_wrt(Cs[which])
-                print C_result_grad
+                print(C_result_grad)
                 
                 # if True:
                 #     aaa = np.linalg.solve(C_result_grad.T.dot(C_result_grad), C_result_grad.dot(np.zeros(C_result_grad.shape[1])))

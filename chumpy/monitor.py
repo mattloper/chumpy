@@ -9,7 +9,7 @@ import psutil
 
 import scipy.sparse as sp
 import numpy as np
-import reordering
+from . import reordering
 
 _TWO_20 = float(2 **20)
 
@@ -18,7 +18,7 @@ memory utils
 
 '''
 def pdb_mem():
-    from monitor import get_current_memory
+    from .monitor import get_current_memory
     mem = get_current_memory()
     if mem > 7000:
         import pdb;pdb.set_trace()
@@ -63,10 +63,10 @@ def build_cache_info(k, v, info_dict):
 def cache_info(ch_node):
     result = {}
     if isinstance(ch_node, reordering.Concatenate) and hasattr(ch_node, 'dr_cached') and len(ch_node.dr_cached) > 0:
-        for k, v in ch_node.dr_cached.iteritems():
+        for k, v in ch_node.dr_cached.items():
             build_cache_info(k, v, result)
     elif len(ch_node._cache['drs']) > 0:
-        for k, v in ch_node._cache['drs'].iteritems():
+        for k, v in ch_node._cache['drs'].items():
             build_cache_info(k, v, result)
 
     return result
@@ -144,6 +144,6 @@ class DrWrtProfiler(object):
         self.history.append(rec)
 
     def harvest(self):
-        print 'collecting and dump to file %s' % self.path
+        print('collecting and dump to file %s' % self.path)
         with open(self.path, 'w') as f:
             json.dump(self.history, f, indent=4)

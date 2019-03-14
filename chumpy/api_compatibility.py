@@ -5,13 +5,13 @@ See LICENCE.txt for licensing and contact information.
 """
 
 
-import ch
+from . import ch
 import numpy as np
 from os.path import join, split
-from StringIO import StringIO
+from six import StringIO
 import numpy
 import chumpy
-import cPickle as pickle
+from six.moves import cPickle as pickle
 
 src = ''
 num_passed = 0
@@ -71,7 +71,7 @@ def r(fn_name, args_req, args_opt, nplib=numpy, chlib=chumpy):
             
         try:
             if isinstance(args_req, dict):
-                fn(**dict(args_req.items() + args_opt.items()))
+                fn(**dict(list(args_req.items()) + list(args_opt.items())))
             else:
                 fn(*args_req, **args_opt)
             if lib is chlib:
@@ -108,7 +108,7 @@ def append(a, b, c):
     b_color = lookup[b] if b in lookup else 'white'
     c_color = lookup[c] if c in lookup else 'white'
 
-    print '%s: %s, %s' % (a,b,c)
+    print('%s: %s, %s' % (a,b,c))
     make_row(a, b, c, b_color, c_color)
 
 def m(s):
@@ -524,11 +524,11 @@ def main():
     src = '<html><body><table border=1>' + src + '</table></body></html>'    
     open(join(split(__file__)[0], 'api_compatibility.html'), 'w').write(src)
     
-    print 'passed %d, not passed %d' % (num_passed, num_not_passed)
+    print('passed %d, not passed %d' % (num_passed, num_not_passed))
     
 
 
 if __name__ == '__main__':
     global which_passed
     main()
-    print ' '.join(which_passed)
+    print(' '.join(which_passed))

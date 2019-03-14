@@ -44,13 +44,15 @@ __all__ += wont_implement
 __all__ += numpy_array_creation_routines
     
     
-import ch
+from .ch import Ch
+import six
 import numpy as np
 import warnings
-import cPickle as pickle
+from six.moves import cPickle as pickle
 import scipy.sparse as sp
-from utils import row, col
+from .utils import row, col
 from copy import copy as copy_copy
+from functools import reduce
 
 __all__ += ['pi', 'set_printoptions']
 pi = np.pi
@@ -66,7 +68,7 @@ for rtn in ['argwhere', 'nonzero', 'flatnonzero']:
     __all__ += [rtn]
 
 for rtn in numpy_array_creation_routines:
-    exec('def %s(*args, **kwargs) : return ch.Ch(np.%s(*args, **kwargs))' % (rtn, rtn))
+    exec('def %s(*args, **kwargs) : return Ch(np.%s(*args, **kwargs))' % (rtn, rtn))
 
 
 class WontImplement(Exception):
@@ -83,7 +85,7 @@ def asarray(a, dtype=None, order=None):
     assert(order is 'C' or order is None)
     if hasattr(a, 'dterms'):
         return a
-    return ch.Ch(np.asarray(a, dtype, order))
+    return Ch(np.asarray(a, dtype, order))
 
 # Everythign is always c-contiguous
 def ascontiguousarray(a, dtype=None): return a
@@ -97,7 +99,7 @@ def copy(self):
 def asfortranarray(a, dtype=None): raise WontImplement
 
 
-class Simpleton(ch.Ch):
+class Simpleton(Ch):
     dterms = 'x'    
     def compute_dr_wrt(self, wrt): 
         return None
@@ -111,7 +113,7 @@ class ceil(Simpleton):
 class sign(Simpleton):
     def compute_r(self): return np.sign(self.x.r)
 
-class Cross(ch.Ch):
+class Cross(Ch):
     dterms = 'a', 'b'
     terms = 'axisa', 'axisb', 'axisc', 'axis'
     term_order = 'a', 'b', 'axisa', 'axisb', 'axisc', 'axis'
@@ -183,7 +185,7 @@ def cross(a, b, axisa=-1, axisb=-1, axisc=-1, axis=None):
 
 
 
-class cumsum(ch.Ch):
+class cumsum(Ch):
     dterms = 'a'
     terms = 'axis'
     term_order = 'a', 'axis'
@@ -214,7 +216,7 @@ class cumsum(ch.Ch):
         return result
             
 
-class UnaryElemwise(ch.Ch):
+class UnaryElemwise(Ch):
     dterms = 'x'
     
     def compute_r(self):
@@ -289,7 +291,7 @@ class absolute(UnaryElemwise):
 
 abs = absolute
 
-class clip(ch.Ch):
+class clip(Ch):
     dterms = 'a'
     terms = 'a_min', 'a_max'
     term_order = 'a', 'a_min', 'a_max'
@@ -302,7 +304,7 @@ class clip(ch.Ch):
             result = np.asarray((self.r != self.a_min) & (self.r != self.a_max), np.float64)
             return sp.diags([result.ravel()], [0]) if len(result)>1 else np.atleast_2d(result)
 
-class sum(ch.Ch):
+class sum(Ch):
     dterms = 'x',
     terms  = 'axis',
     term_order = 'x', 'axis'
@@ -336,7 +338,7 @@ class sum(ch.Ch):
             return self.dr_cache[uid]
             
 
-class mean(ch.Ch):
+class mean(Ch):
     dterms = 'x',
     terms  = 'axis',
     term_order = 'x', 'axis'
@@ -381,7 +383,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
     return sqrt(var(a, axis=axis))
     
 
-class SumOfSquares(ch.Ch):
+class SumOfSquares(Ch):
     dterms = 'x',
 
     def compute_r(self):
@@ -392,7 +394,7 @@ class SumOfSquares(ch.Ch):
             return row(self.x.r.ravel()*2.)
     
     
-class divide (ch.Ch):
+class divide (Ch):
     dterms = 'x1', 'x2'
 
     def compute_r(self):
@@ -541,7 +543,7 @@ def _broadcast_setup(a, b, wrt):
 
 
   
-class add(ch.Ch):
+class add(Ch):
     dterms = 'a', 'b'
         
     def compute_r(self):
@@ -557,7 +559,7 @@ class add(ch.Ch):
 
             
             
-class subtract(ch.Ch):
+class subtract(Ch):
     dterms = 'a', 'b'
 
     def compute_r(self):
@@ -574,7 +576,7 @@ class subtract(ch.Ch):
     
     
     
-class power (ch.Ch):
+class power (Ch):
     """Given vector \f$x\f$, computes \f$x^2\f$ and \f$\frac{dx^2}{x}\f$"""
     dterms = 'x', 'pow'
 
@@ -608,7 +610,7 @@ class power (ch.Ch):
 
         
 
-class A_extremum(ch.Ch):
+class A_extremum(Ch):
     """Superclass for various min and max subclasses"""
     dterms = 'a'
     terms = 'axis'
@@ -645,8 +647,8 @@ class A_extremum(ch.Ch):
             # np.amin here probably
             idxs = np.arange(mtx.size).reshape(mtx.shape)
             mn = np.amin(idxs, axis=axis)
-            stride = np.array(mtx.strides)
-            stride /= np.min(stride) # go from bytes to num elements
+            mtx_strides = np.array(mtx.strides)
+            stride = mtx_strides / np.min(mtx_strides) # go from bytes to num elements
             stride = stride[axis]
         return mn, stride
 
@@ -672,7 +674,7 @@ class nanmax(A_extremum):
     def argf(self, *args, **kwargs): return np.nanargmax(*args, **kwargs)
     
 
-class Extremum(ch.Ch):
+class Extremum(Ch):
     dterms = 'a','b'
     
     def compute_r(self): return self.f(self.a.r, self.b.r)
@@ -699,7 +701,7 @@ class minimum(Extremum):
     def f(self, a, b): return np.minimum(a, b)
 
 
-class multiply(ch.Ch):
+class multiply(Ch):
     dterms = 'a', 'b'
 
     def compute_r(self):
@@ -722,7 +724,7 @@ class multiply(ch.Ch):
         
                 
         
-class dot(ch.Ch):
+class dot(Ch):
     dterms = 'a', 'b'
 
     def compute_r(self):
@@ -761,7 +763,7 @@ class dot(ch.Ch):
         elif wrt is self.b:
             return self.compute_d2()
         
-class BinaryElemwiseNoDrv(ch.Ch):
+class BinaryElemwiseNoDrv(Ch):
     dterms = 'x1', 'x2'
     
     def compute_r(self):

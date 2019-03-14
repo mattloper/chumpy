@@ -9,8 +9,8 @@ __author__ = 'matt'
 
 __all__ = [] # added to incrementally below
 
-import ch
-from ch import Ch
+from . import ch
+from .ch import Ch
 import numpy as np
 
 class LogicFunc(Ch):
@@ -34,6 +34,6 @@ __all__ += unaries
 
 
 if __name__ == '__main__':
-    import ch
-    print all(np.array([1,2,3]))
-    print isinf(np.array([0,2,3]))
+    from . import ch
+    print(all(np.array([1,2,3])))
+    print(isinf(np.array([0,2,3])))
