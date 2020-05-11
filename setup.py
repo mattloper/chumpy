@@ -12,7 +12,10 @@ except ImportError: # for pip <= 9.0.3
 from runpy import run_path
 
 install_reqs = parse_requirements('requirements.txt', session=False)
-install_requires = [str(ir.req) for ir in install_reqs]
+try:  # for pip < 20.1
+    install_requires = [str(ir.req) for ir in install_reqs]
+except AttributeError:  # for pip >= 20.1
+    install_requires = [str(ir.requirement) for ir in install_reqs]
 
 def get_version():
     namespace = run_path('chumpy/version.py')
