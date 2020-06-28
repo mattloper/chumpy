@@ -795,13 +795,13 @@ def nonzero(a):
         a = a.r
     return np.nonzero(a)
 
-# Try to pull the code for tensordot in from numpy and reinterpret it using chumpy ops
-try:
-    import inspect
-    exec(''.join(inspect.getsourcelines(np.tensordot)[0]))
-    __all__ += ['tensordot']
-except:
-    pass
+# Pull the code for tensordot in from numpy and reinterpret it using chumpy ops
+import os
+source_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'np_tensordot.py')
+with open(source_path, 'r') as f:
+    source_lines = f.readlines()
+exec(''.join(source_lines))
+__all__ += ['tensordot']
 
 
 
