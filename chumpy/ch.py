@@ -1200,7 +1200,12 @@ def depends_on(*dependencies):
             [deps.add(d) for d in dep]
     
     def _depends_on(func):
-        want_out = 'out' in inspect.getargspec(func).args
+        if sys.version_info[0] <= 3 and sys.version_info[1] < 6:  # If Python version is less than 3.6
+            # use getargspec
+            want_out = 'out' in inspect.getargspec(func).args
+        else:
+            # use getfullargspec
+            want_out = 'out' in inspect.getfullargspec(func).args
         
         @wraps(func)
         def with_caching(self, *args, **kwargs):
