@@ -1029,7 +1029,7 @@ class Ch(object):
                         result += string_for(getattr(self, dterm), dterm)
 
             if cachelim != np.inf and hasattr(self, '_cache') and 'drs' in self._cache:
-                from six.moves import cPickle as pickle
+                import pickle
                 for dtval, jac in list(self._cache['drs'].items()):
                     # child_label = getattr(dtval, 'label') if hasattr(dtval, 'label') else dterm
                     # child_label = '%s (%s)' % (child_label, str(dtval.__class__.__name__))
@@ -1200,7 +1200,7 @@ def depends_on(*dependencies):
             [deps.add(d) for d in dep]
     
     def _depends_on(func):
-        want_out = 'out' in inspect.getargspec(func).args
+        want_out = 'out' in inspect.getfullargspec(func).args
         
         @wraps(func)
         def with_caching(self, *args, **kwargs):
@@ -1243,7 +1243,7 @@ class ChLambda(Ch):
             self.args[argname].x = getattr(self, argname)
     
     def __init__(self, lmb, initial_args=None):
-        args = {argname: ChHandle(x=Ch(idx)) for idx, argname in enumerate(inspect.getargspec(lmb)[0])}
+        args = {argname: ChHandle(x=Ch(idx)) for idx, argname in enumerate(inspect.getfullargspec(lmb)[0])}
         if initial_args is not None:
             for initial_arg in initial_args:
                 if initial_arg in args:

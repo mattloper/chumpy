@@ -1,0 +1,45 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[dependency-groups]
+dev = [
+  "coverage>=7.8.0"
+]
+
+[project]
+authors = [
+  {email = "matt.loper@gmail.com", name = "Matthew Loper"}
+]
+classifiers = [
+  # How mature is this project? Common values are
+  # 3 - Alpha
+  # 4 - Beta
+  # 5 - Production/Stable
+  'Development Status :: 4 - Beta',
+  # Indicate who your project is intended for
+  'Intended Audience :: Science/Research',
+  # Pick your license as you wish (should match "license" above)
+  'License :: OSI Approved :: MIT License',
+  'Operating System :: MacOS :: MacOS X',
+  'Operating System :: POSIX :: Linux',
+  # Specify the Python versions you support here. In particular, ensure
+  # that you indicate whether you support Python 2, Python 3 or both.
+  'Programming Language :: Python :: 3',
+  'Topic :: Scientific/Engineering :: Mathematics'
+]
+dependencies = [
+  "scipy>=1.13.1"
+]
+description = "Autodifferentiation tool for Python"
+license = "MIT"
+name = "chumpy"
+readme = "README.md"
+requires-python = ">=3.9"
+version = "0.71"
+
+[project.urls]
+Repository = 'https://github.com/mattloper/chumpy'
+
+[tool.hatch.build]
+exclude = ["chumpy/optional_test_performance.py"]

@@ -301,7 +301,7 @@ class TestCh(unittest.TestCase):
         # attribute, which is a nonserializable WeakKeyDictionary. 
         # So we pickle/unpickle, change a child and verify the value
         # at root, and verify that both children have parentage.
-        from six.moves import cPickle as pickle
+        import pickle
         tmp = ch.Ch(10) + ch.Ch(20)
         tmp = pickle.loads(pickle.dumps(tmp))
         tmp.b.x = 30

@@ -8,10 +8,10 @@ See LICENCE.txt for licensing and contact information.
 from . import ch
 import numpy as np
 from os.path import join, split
-from six import StringIO
+from io import StringIO
 import numpy
 import chumpy
-from six.moves import cPickle as pickle
+import pickle
 
 src = ''
 num_passed = 0

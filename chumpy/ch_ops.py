@@ -45,10 +45,9 @@ __all__ += numpy_array_creation_routines
     
     
 from .ch import Ch
-import six
 import numpy as np
 import warnings
-from six.moves import cPickle as pickle
+import pickle
 import scipy.sparse as sp
 from .utils import row, col
 from copy import copy as copy_copy
@@ -82,7 +81,7 @@ for rtn in not_yet_implemented:
 
 def asarray(a, dtype=None, order=None):
     assert(dtype is None or dtype is np.float64)
-    assert(order is 'C' or order is None)
+    assert(order == 'C' or order is None)
     if hasattr(a, 'dterms'):
         return a
     return Ch(np.asarray(a, dtype, order))
